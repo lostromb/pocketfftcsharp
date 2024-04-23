@@ -13,12 +13,21 @@ namespace ManagedDriver
 
         private static void fill_random(Span<double> data, int length)
         {
-            Random rand = new Random(77143423);
+            Random rand = new Random();
             for (int m = 0; m < length; ++m)
             {
                 data[m] = rand.NextDouble() - 0.5;
             }
-            //data[0] = 1.0;
+        }
+
+        private static void fill_random(Span<cmplx> data, int length)
+        {
+            Random rand = new Random();
+            for (int m = 0; m < length; ++m)
+            {
+                data[m].r = rand.NextDouble() - 0.5;
+                data[m].i = rand.NextDouble() - 0.5;
+            }
         }
 
         private static double errcalc(Span<double> data, Span<double> odata, int length)
@@ -33,10 +42,24 @@ namespace ManagedDriver
             return Math.Sqrt(errsum / sum);
         }
 
+        private static double errcalc(Span<cmplx> data, Span<cmplx> odata, int length)
+        {
+            double sum = 0, errsum = 0;
+            for (int m = 0; m < length; ++m)
+            {
+                errsum += (data[m].r - odata[m].r) * (data[m].r - odata[m].r);
+                errsum += (data[m].i - odata[m].i) * (data[m].i - odata[m].i);
+                sum += odata[m].r * odata[m].r;
+                sum += odata[m].i * odata[m].i;
+            }
+
+            return Math.Sqrt(errsum / sum);
+        }
+
         public static int test_real()
         {
-            double[] data = new double[maxlen];
-            double[] odata = new double[maxlen];
+            double[] data = new double[2 * maxlen];
+            double[] odata = new double[2 * maxlen];
             const double epsilon = 2e-15;
             int ret = 0;
             fill_random(odata, maxlen);
@@ -45,14 +68,16 @@ namespace ManagedDriver
             {
                 //Console.WriteLine("testing real " + length);
                 odata.AsSpan(0, length).CopyTo(data);
-                PocketFFTBaseline.rfft_plan plan = PocketFFTBaseline.make_rfft_plan(length);
-                PocketFFTBaseline.rfft_forward(plan, data, 1.0);
-                PocketFFTBaseline.rfft_backward(plan, data, 1.0 / length);
-                PocketFFTBaseline.destroy_rfft_plan(plan);
+                using (IRealFFTPlan plan = PocketFFTBaseline.make_rfft_plan(length))
+                {
+                    plan.Forward(data, 1.0);
+                    plan.Backward(data, 1.0 / length);
+                }
+
                 double err = errcalc(data, odata, length);
                 if (err > epsilon)
                 {
-                    Console.WriteLine($"problem at real length {length}: {err} - factors {string.Join(',', plan.Factors())}");
+                    Console.WriteLine($"problem at real length {length}: {err}");
                     ret = 1;
                 }
                 errsum += err;
@@ -64,9 +89,9 @@ namespace ManagedDriver
 
         public static int test_complex()
         {
-            double[] data = new double[2 * maxlen];
-            double[] odata = new double[2 * maxlen];
-            fill_random(odata, 2 * maxlen);
+            cmplx[] data = new cmplx[maxlen];
+            cmplx[] odata = new cmplx[maxlen];
+            fill_random(odata, maxlen);
             const double epsilon = 2e-15;
             int ret = 0;
             double errsum = 0;
@@ -74,15 +99,16 @@ namespace ManagedDriver
             for (int length = 1; length <= maxlen; ++length)
             {
                 //Console.WriteLine("testing cmplx " + length);
-                odata.AsSpan(0, 2 * length).CopyTo(data);
-                PocketFFTBaseline.cfft_plan plan = PocketFFTBaseline.make_cfft_plan(length);
-                PocketFFTBaseline.cfft_forward(plan, data, 1.0);
-                PocketFFTBaseline.cfft_backward(plan, data, 1.0 / length);
-                PocketFFTBaseline.destroy_cfft_plan(plan);
-                double err = errcalc(data, odata, 2 * length);
+                odata.AsSpan(0, length).CopyTo(data);
+                using (IComplexFFTPlan plan = PocketFFTBaseline.make_cfft_plan(length))
+                {
+                    plan.Forward(data, 1.0);
+                    plan.Backward(data, 1.0 / length);
+                }
+                double err = errcalc(data, odata, length);
                 if (err > epsilon)
                 {
-                    Console.WriteLine($"problem at complex length {length}: {err} - factors {string.Join(',', plan.Factors())}");
+                    Console.WriteLine($"problem at complex length {length}: {err}");
                     ret = 1;
                 }
                 errsum += err;
@@ -98,10 +124,12 @@ namespace ManagedDriver
             double[] odata = new double[length];
             fill_random(odata, length);
             odata.AsSpan(0, length).CopyTo(data);
-            PocketFFTBaseline.rfft_plan plan = PocketFFTBaseline.make_rfft_plan(length);
-            PocketFFTBaseline.rfft_forward(plan, data, 1.0);
-            PocketFFTBaseline.rfft_backward(plan, data, 1.0 / length);
-            PocketFFTBaseline.destroy_rfft_plan(plan);
+            using (IRealFFTPlan plan = PocketFFTBaseline.make_rfft_plan(length))
+            {
+                plan.Forward(data, 1.0);
+                plan.Backward(data, 1.0 / length);
+            }
+
             double err = errcalc(data, odata, length);
             Console.WriteLine($"err: {err}");
         }

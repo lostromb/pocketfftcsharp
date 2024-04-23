@@ -28,7 +28,7 @@ namespace PocketFFT
     }
 #endif
 
-    internal class cfftp_plan : IComplexFFTPlan
+    internal class ComplexFFTPackedPlan : IComplexFFTPlan
     {
         internal int length;
         internal int nfct;
@@ -41,7 +41,7 @@ namespace PocketFFT
 
         public int Length => length;
 
-        public cfftp_plan(int length)
+        public ComplexFFTPackedPlan(int length)
         {
             if (length == 0)
             {
@@ -68,18 +68,15 @@ namespace PocketFFT
                 return;
             }
 
-            if (!cfftp_factorize(this))
+            if (!cfftp_factorize())
             {
                 throw new ArithmeticException($"Could not factorize FFT of length {length}");
             }
 
-            int tws = cfftp_twsize(this);
+            int tws = cfftp_twsize();
             this.mem = new cmplx[tws];
 
-            cfftp_comp_twiddle(this);
-
-            //if (Constants.NAIL_TEST) Console.WriteLine("cfftp plan mem");
-            //if (Constants.NAIL_TEST) NailTest.PrintComplexArray(plan.mem.AsSpan(0, tws));
+            cfftp_comp_twiddle();
         }
 
         public void Dispose() { }
@@ -94,9 +91,9 @@ namespace PocketFFT
             pass_all(c, fct, 1);
         }
 
-        static bool cfftp_factorize(cfftp_plan plan)
+        private bool cfftp_factorize()
         {
-            int length = plan.length;
+            int length = this.length;
             int nfct = 0;
 
             while ((length % 4) == 0)
@@ -106,7 +103,7 @@ namespace PocketFFT
                     return false;
                 }
 
-                plan.fct[nfct++].fct = 4;
+                this.fct[nfct++].fct = 4;
                 length >>= 2;
             }
             if ((length % 2) == 0)
@@ -118,8 +115,8 @@ namespace PocketFFT
                     return false;
                 }
 
-                plan.fct[nfct++].fct = 2;
-                Intrinsics.Swap(ref plan.fct[0].fct, ref plan.fct[nfct - 1].fct);
+                this.fct[nfct++].fct = 2;
+                Intrinsics.Swap(ref this.fct[0].fct, ref this.fct[nfct - 1].fct);
             }
 
             int maxl = (int)(Math.Sqrt((double)length)) + 1;
@@ -134,7 +131,7 @@ namespace PocketFFT
                             return false;
                         }
 
-                        plan.fct[nfct++].fct = divisor;
+                        this.fct[nfct++].fct = divisor;
                         length /= divisor;
                     }
 
@@ -144,19 +141,19 @@ namespace PocketFFT
 
             if (length > 1)
             {
-                plan.fct[nfct++].fct = length;
+                this.fct[nfct++].fct = length;
             }
 
-            plan.nfct = nfct;
+            this.nfct = nfct;
             return true;
         }
 
-        static int cfftp_twsize(cfftp_plan plan)
+        private int cfftp_twsize()
         {
             int twsize = 0, l1 = 1;
-            for (int k = 0; k < plan.nfct; ++k)
+            for (int k = 0; k < this.nfct; ++k)
             {
-                int ip = plan.fct[k].fct, ido = plan.length / (l1 * ip);
+                int ip = this.fct[k].fct, ido = this.length / (l1 * ip);
                 twsize += (ip - 1) * (ido - 1);
                 if (ip > 11)
                 {
@@ -169,18 +166,18 @@ namespace PocketFFT
             return twsize;
         }
 
-        static void cfftp_comp_twiddle(cfftp_plan plan)
+        private void cfftp_comp_twiddle()
         {
-            int length = plan.length;
+            int length = this.length;
             double[] twid = new double[2 * length];
             Intrinsics.sincos_2pibyn(length, twid);
             int l1 = 1;
             int memofs = 0;
-            for (int k = 0; k < plan.nfct; ++k)
+            for (int k = 0; k < this.nfct; ++k)
             {
-                int ip = plan.fct[k].fct, ido = length / (l1 * ip);
-                plan.fct[k].tw = memofs;
-                Span<cmplx> tw = plan.mem.AsSpan(memofs);
+                int ip = this.fct[k].fct, ido = length / (l1 * ip);
+                this.fct[k].tw = memofs;
+                Span<cmplx> tw = this.mem.AsSpan(memofs);
                 memofs += (ip - 1) * (ido - 1);
                 for (int j = 1; j < ip; ++j)
                 {
@@ -192,8 +189,8 @@ namespace PocketFFT
                 }
                 if (ip > 11)
                 {
-                    plan.fct[k].tws = memofs;
-                    Span<cmplx> tws = plan.mem.AsSpan(memofs);
+                    this.fct[k].tws = memofs;
+                    Span<cmplx> tws = this.mem.AsSpan(memofs);
                     memofs += ip;
                     for (int j = 0; j < ip; ++j)
                     {
@@ -203,8 +200,6 @@ namespace PocketFFT
                 }
                 l1 *= ip;
             }
-
-            //DEALLOC(twid);
         }
 
         private void pass_all(Span<cmplx> c, double fct, int sign)

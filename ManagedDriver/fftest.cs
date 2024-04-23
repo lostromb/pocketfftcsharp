@@ -68,7 +68,7 @@ namespace ManagedDriver
             {
                 //Console.WriteLine("testing real " + length);
                 odata.AsSpan(0, length).CopyTo(data);
-                using (IRealFFTPlan plan = PocketFFTBaseline.make_rfft_plan(length))
+                using (IRealFFTPlan plan = FFTPlanFactory.Create1DRealFFTPlan(length))
                 {
                     plan.Forward(data, 1.0);
                     plan.Backward(data, 1.0 / length);
@@ -100,7 +100,7 @@ namespace ManagedDriver
             {
                 //Console.WriteLine("testing cmplx " + length);
                 odata.AsSpan(0, length).CopyTo(data);
-                using (IComplexFFTPlan plan = PocketFFTBaseline.make_cfft_plan(length))
+                using (IComplexFFTPlan plan = FFTPlanFactory.Create1DComplexFFTPlan(length))
                 {
                     plan.Forward(data, 1.0);
                     plan.Backward(data, 1.0 / length);
@@ -124,7 +124,7 @@ namespace ManagedDriver
             double[] odata = new double[length];
             fill_random(odata, length);
             odata.AsSpan(0, length).CopyTo(data);
-            using (IRealFFTPlan plan = PocketFFTBaseline.make_rfft_plan(length))
+            using (IRealFFTPlan plan = FFTPlanFactory.Create1DRealFFTPlan(length))
             {
                 plan.Forward(data, 1.0);
                 plan.Backward(data, 1.0 / length);

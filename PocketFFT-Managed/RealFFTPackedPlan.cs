@@ -4,34 +4,34 @@ using System.Text;
 
 namespace PocketFFT
 {
-    internal struct rfftp_fctdata
-    {
-        public int fct;
-        public int tw; // index into plan.mem
-        public int tws; // index into plan.mem
+    
 
-        public rfftp_fctdata(int fct, int tw, int tws)
+    public class RealFFTPackedPlan : IRealFFTPlan
+    {
+        internal struct rfftp_fctdata
         {
-            this.fct = fct;
-            this.tw = tw;
-            this.tws = tws;
+            public int fct;
+            public int tw; // index into plan.mem
+            public int tws; // index into plan.mem
+
+            public rfftp_fctdata(int fct, int tw, int tws)
+            {
+                this.fct = fct;
+                this.tw = tw;
+                this.tws = tws;
+            }
         }
-    }
 
-#if NET8_0_OR_GREATER
-    [System.Runtime.CompilerServices.InlineArray(Constants.NFCT)]
-    internal struct rfftp_fctdata_array
-    {
-        internal rfftp_fctdata data;
-    }
-#endif
-
-    public class rfftp_plan : IRealFFTPlan
-    {
         internal int length;
         internal int nfct;
         internal double[] mem;
 #if NET8_0_OR_GREATER
+        [System.Runtime.CompilerServices.InlineArray(Constants.NFCT)]
+        internal struct rfftp_fctdata_array
+        {
+            internal rfftp_fctdata data;
+        }
+
         internal rfftp_fctdata_array fct;
 #else
         internal rfftp_fctdata[] fct; // [Constants.NFCT]
@@ -39,7 +39,7 @@ namespace PocketFFT
 
         public int Length => length;
 
-        public rfftp_plan(int length)
+        public RealFFTPackedPlan(int length)
         {
             if (length == 0)
             {
@@ -66,14 +66,14 @@ namespace PocketFFT
                 return;
             }
 
-            if (!rfftp_factorize(this))
+            if (!rfftp_factorize())
             {
                 throw new ArithmeticException($"Could not factorize FFT of length {length}");
             }
 
-            int tws = rfftp_twsize(this);
+            int tws = rfftp_twsize();
             this.mem = new double[tws];
-            rfftp_comp_twiddle(this);
+            rfftp_comp_twiddle();
         }
 
         public void Forward(Span<double> c, double fct)
@@ -88,7 +88,7 @@ namespace PocketFFT
 
         public void Dispose() { }
 
-        static void rfftp_forward(rfftp_plan plan, Span<double> c, double fct)
+        private static void rfftp_forward(RealFFTPackedPlan plan, Span<double> c, double fct)
         {
             if (plan.length == 1)
             {
@@ -141,10 +141,9 @@ namespace PocketFFT
             }
 
             copy_and_norm(c, p1, n, fct);
-            //DEALLOC(ch);
         }
 
-        static void rfftp_backward(rfftp_plan plan, Span<double> c, double fct)
+        private static void rfftp_backward(RealFFTPackedPlan plan, Span<double> c, double fct)
         {
             if (plan.length == 1)
             {
@@ -191,12 +190,11 @@ namespace PocketFFT
             }
 
             copy_and_norm(c, p1, n, fct);
-            //DEALLOC(ch);
         }
 
-        static void copy_and_norm(Span<double> c, Span<double> p1, int n, double fct)
+        private static void copy_and_norm(Span<double> c, Span<double> p1, int n, double fct)
         {
-            if (p1 != c)
+            if (p1 != c) // FIXME span reference comparison?
             {
                 if (fct != 1.0)
                 {
@@ -223,9 +221,9 @@ namespace PocketFFT
             }
         }
 
-        private static bool rfftp_factorize(rfftp_plan plan)
+        private bool rfftp_factorize()
         {
-            int length = plan.length;
+            int length = this.length;
             int nfct = 0;
             while ((length % 4) == 0)
             {
@@ -234,7 +232,7 @@ namespace PocketFFT
                     return false;
                 }
 
-                plan.fct[nfct++].fct = 4; length >>= 2;
+                this.fct[nfct++].fct = 4; length >>= 2;
             }
 
             if ((length % 2) == 0)
@@ -246,8 +244,8 @@ namespace PocketFFT
                     return false;
                 }
 
-                plan.fct[nfct++].fct = 2;
-                Intrinsics.Swap(ref plan.fct[0].fct, ref plan.fct[nfct - 1].fct);
+                this.fct[nfct++].fct = 2;
+                Intrinsics.Swap(ref this.fct[0].fct, ref this.fct[nfct - 1].fct);
             }
 
             int maxl = (int)(Math.Sqrt((double)length)) + 1;
@@ -262,7 +260,7 @@ namespace PocketFFT
                             return false;
                         }
 
-                        plan.fct[nfct++].fct = divisor;
+                        this.fct[nfct++].fct = divisor;
                         length /= divisor;
                     }
                     maxl = (int)(Math.Sqrt((double)length)) + 1;
@@ -270,19 +268,19 @@ namespace PocketFFT
             }
             if (length > 1)
             {
-                plan.fct[nfct++].fct = length;
+                this.fct[nfct++].fct = length;
             }
 
-            plan.nfct = nfct;
+            this.nfct = nfct;
             return true;
         }
 
-        static int rfftp_twsize(rfftp_plan plan)
+        private int rfftp_twsize()
         {
             int twsize = 0, l1 = 1;
-            for (int k = 0; k < plan.nfct; ++k)
+            for (int k = 0; k < this.nfct; ++k)
             {
-                int ip = plan.fct[k].fct, ido = plan.length / (l1 * ip);
+                int ip = this.fct[k].fct, ido = this.length / (l1 * ip);
                 twsize += (ip - 1) * (ido - 1);
                 if (ip > 5) twsize += 2 * ip;
                 l1 *= ip;
@@ -291,20 +289,20 @@ namespace PocketFFT
             return twsize;
         }
 
-        static void rfftp_comp_twiddle(rfftp_plan plan)
+        private void rfftp_comp_twiddle()
         {
-            int length = plan.length;
+            int length = this.length;
             double[] twid = new double[2 * length];
             Intrinsics.sincos_2pibyn_half(length, twid);
             int l1 = 1;
             int ptr = 0;
-            for (int k = 0; k < plan.nfct; ++k)
+            for (int k = 0; k < this.nfct; ++k)
             {
-                int ip = plan.fct[k].fct, ido = length / (l1 * ip);
-                if (k < plan.nfct - 1) // last factor doesn't need twiddles
+                int ip = this.fct[k].fct, ido = length / (l1 * ip);
+                if (k < this.nfct - 1) // last factor doesn't need twiddles
                 {
-                    plan.fct[k].tw = ptr;
-                    Span<double> tw = plan.mem.AsSpan(ptr);
+                    this.fct[k].tw = ptr;
+                    Span<double> tw = this.mem.AsSpan(ptr);
                     ptr += (ip - 1) * (ido - 1);
                     for (int j = 1; j < ip; ++j)
                     {
@@ -318,8 +316,8 @@ namespace PocketFFT
 
                 if (ip > 5) // special factors required by *g functions
                 {
-                    plan.fct[k].tws = ptr;
-                    Span<double> tws = plan.mem.AsSpan(ptr);
+                    this.fct[k].tws = ptr;
+                    Span<double> tws = this.mem.AsSpan(ptr);
                     ptr += 2 * ip;
                     tws[0] = 1.0;
                     tws[1] = 0.0;
@@ -334,11 +332,9 @@ namespace PocketFFT
 
                 l1 *= ip;
             }
-
-            //DEALLOC(twid);
         }
 
-        static void radf2(int ido, int l1, Span<double> cc, Span<double> ch, Span<double> wa)
+        private static void radf2(int ido, int l1, Span<double> cc, Span<double> ch, Span<double> wa)
         {
             const int cdim = 2;
 
@@ -379,7 +375,7 @@ namespace PocketFFT
             }
         }
 
-        static void radf3(int ido, int l1, Span<double> cc, Span<double> ch, Span<double> wa)
+        private static void radf3(int ido, int l1, Span<double> cc, Span<double> ch, Span<double> wa)
         {
             const int cdim = 3;
             const double taur = -0.5, taui = 0.86602540378443864676;
@@ -424,7 +420,7 @@ namespace PocketFFT
             }
         }
 
-        static void radf4(int ido, int l1, Span<double> cc, Span<double> ch, Span<double> wa)
+        private static void radf4(int ido, int l1, Span<double> cc, Span<double> ch, Span<double> wa)
         {
             const int cdim = 4;
             const double hsqt2 = 0.70710678118654752440;
@@ -487,7 +483,7 @@ namespace PocketFFT
             }
         }
 
-        static void radf5(int ido, int l1, Span<double> cc, Span<double> ch, Span<double> wa)
+        private static void radf5(int ido, int l1, Span<double> cc, Span<double> ch, Span<double> wa)
         {
             const int cdim = 5;
             const double
@@ -557,7 +553,7 @@ namespace PocketFFT
             }
         }
 
-        static void radfg(int ido, int ip, int l1, Span<double> cc, Span<double> ch, Span<double> wa, Span<double> csarr)
+        private static void radfg(int ido, int ip, int l1, Span<double> cc, Span<double> ch, Span<double> wa, Span<double> csarr)
         {
             int cdim = ip;
             int ipph = (ip + 1) / 2;
@@ -715,7 +711,7 @@ namespace PocketFFT
             }
         }
 
-        static void radb2(int ido, int l1, Span<double> cc, Span<double> ch, Span<double> wa)
+        private static void radb2(int ido, int l1, Span<double> cc, Span<double> ch, Span<double> wa)
         {
             const int cdim = 2;
 
@@ -755,7 +751,7 @@ namespace PocketFFT
             }
         }
 
-        static void radb3(int ido, int l1, Span<double> cc, Span<double> ch, Span<double> wa)
+        private static void radb3(int ido, int l1, Span<double> cc, Span<double> ch, Span<double> wa)
         {
             const int cdim = 3;
             const double taur = -0.5, taui = 0.86602540378443864676;
@@ -800,7 +796,7 @@ namespace PocketFFT
             }
         }
 
-        static void radb4(int ido, int l1, Span<double> cc, Span<double> ch, Span<double> wa)
+        private static void radb4(int ido, int l1, Span<double> cc, Span<double> ch, Span<double> wa)
         {
             const int cdim = 4;
             const double sqrt2 = 1.41421356237309504880;
@@ -869,7 +865,7 @@ namespace PocketFFT
             }
         }
 
-        static void radb5(int ido, int l1, Span<double> cc, Span<double> ch, Span<double> wa)
+        private static void radb5(int ido, int l1, Span<double> cc, Span<double> ch, Span<double> wa)
         {
             const int cdim = 5;
             const double tr11 = 0.3090169943749474241, ti11 = 0.95105651629515357212,
@@ -937,7 +933,7 @@ namespace PocketFFT
             }
         }
 
-        static void radbg(int ido, int ip, int l1, Span<double> cc, Span<double> ch, Span<double> wa, Span<double> csarr)
+        private static void radbg(int ido, int ip, int l1, Span<double> cc, Span<double> ch, Span<double> wa, Span<double> csarr)
         {
             int cdim = ip;
             int ipph = (ip + 1) / 2;

@@ -12,10 +12,9 @@ namespace PocketFFT
 
     // compare also https://www.shoup.net/PGFFT/
     // https://bitbucket.org/jpommier/pffft/src/master/
-    public static class PocketFFTBaseline
+    public static class FFTPlanFactory
     {
-        
-        public static IComplexFFTPlan make_cfft_plan(int length)
+        public static IComplexFFTPlan Create1DComplexFFTPlan(int length)
         {
             if (length == 0)
             {
@@ -24,7 +23,7 @@ namespace PocketFFT
 
             if ((length < 50) || (Intrinsics.largest_prime_factor(length) <= Math.Sqrt(length)))
             {
-                return new cfftp_plan(length);
+                return new ComplexFFTPackedPlan(length);
             }
 
             double comp1 = Intrinsics.cost_guess(length);
@@ -33,15 +32,15 @@ namespace PocketFFT
 
             if (comp2 < comp1) // use Bluestein
             {
-                return new fftblue_plan(length);
+                return new FFTBluesteinPlan(length);
             }
             else
             {
-                return new cfftp_plan(length);
+                return new ComplexFFTPackedPlan(length);
             }
         }
 
-        public static IRealFFTPlan make_rfft_plan(int length)
+        public static IRealFFTPlan Create1DRealFFTPlan(int length)
         {
             if (length == 0)
             {
@@ -50,7 +49,7 @@ namespace PocketFFT
 
             if ((length < 50) || (Intrinsics.largest_prime_factor(length) <= Math.Sqrt(length)))
             {
-                return new rfftp_plan(length);
+                return new RealFFTPackedPlan(length);
             }
 
             double comp1 = 0.5 * Intrinsics.cost_guess(length);
@@ -58,11 +57,11 @@ namespace PocketFFT
             comp2 *= 1.5; /* fudge factor that appears to give good overall performance */
             if (comp2 < comp1) // use Bluestein
             {
-                return new fftblue_plan(length);
+                return new FFTBluesteinPlan(length);
             }
             else
             {
-                return new rfftp_plan(length);
+                return new RealFFTPackedPlan(length);
             }
         }
     }

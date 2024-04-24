@@ -70,19 +70,26 @@ namespace PocketFFT
         public void Forward(Span<double> c, double fct)
         {
             int n = this.n;
-            double[] tmp = new double[2 * n];
+            cmplx[] tmp = new cmplx[n];
             for (int m = 0; m < n; ++m)
             {
-                tmp[2 * m] = c[m];
-                tmp[2 * m + 1] = 0.0;
+                tmp[m].r = c[m];
+                tmp[m].i = 0.0;
             }
 
-            // It's possible to remove this span cast, but we would just move it to a different cast lower down in the function so I guess it stays
-            fftblue_fft(MemoryMarshal.Cast<double, cmplx>(tmp), -1, fct);
+            fftblue_fft(tmp, -1, fct);
 
-            c[0] = tmp[0];
-            tmp.AsSpan(2, (n - 1)).CopyTo(c.Slice(1));
-            //memcpy(c + 1, tmp + 2, (n - 1) * sizeof(double));
+            c[0] = tmp[0].r;
+
+            // Safe method
+            //for (int i = 1; i < n; i++)
+            //{
+            //    c[2 * i - 1] = tmp[i].r;
+            //    c[2 * i] = tmp[i].i;
+            //}
+
+            // Jank method
+            MemoryMarshal.Cast<cmplx, double>(tmp.AsSpan(1, n - 1)).CopyTo(c.Slice(1));
 
             //DEALLOC(tmp);
         }
@@ -95,23 +102,35 @@ namespace PocketFFT
         public void Backward(Span<double> c, double fct)
         {
             int n = this.n;
-            double[] tmp = new double[2 * n];
-            tmp[0] = c[0];
-            tmp[1] = 0.0;
-            c.Slice(1, (n - 1)).CopyTo(tmp.AsSpan(2));
-            //memcpy(tmp + 2, c + 1, (n - 1) * sizeof(double));
+            cmplx[] tmp = new cmplx[n];
+            tmp[0].r = c[0];
+            tmp[1].i = 0.0;
 
-            if ((n & 1) == 0) tmp[n + 1] = 0.0;
-            for (int m = 2; m < n; m += 2)
+            // Safe method
+            //for (int i = 1; i < n; i++)
+            //{
+            //    tmp[i].r = c[2 * i - 1];
+            //    tmp[i].i = c[2 * i];
+            //}
+
+            // Jank method
+            c.Slice(1, (n - 1)).CopyTo(MemoryMarshal.Cast<cmplx, double>(tmp.AsSpan(1)));
+
+            if ((n & 1) == 0)
             {
-                tmp[2 * n - m] = tmp[m];
-                tmp[2 * n - m + 1] = -tmp[m + 1];
+                tmp[n - 1].i = 0.0;
             }
 
-            fftblue_fft(MemoryMarshal.Cast<double, cmplx>(tmp), 1, fct);
+            for (int m = 1; m < n; m++)
+            {
+                tmp[n - m].r = tmp[m].r;
+                tmp[n - m].i = -tmp[m].i;
+            }
+
+            fftblue_fft(tmp, 1, fct);
             for (int m = 0; m < n; ++m)
             {
-                c[m] = tmp[2 * m];
+                c[m] = tmp[m].r;
             }
 
             //DEALLOC(tmp);

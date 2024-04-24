@@ -24,12 +24,12 @@ namespace PocketFFT
             {
                 return a.Length == 0;
             }
-            
+
             return Unsafe.AreSame(ref Unsafe.AsRef(a[0]), ref Unsafe.AsRef(b[0]));
-            
+
             //return a.Slice(0, 1).Overlaps(b.Slice(0, 1));
         }
-        
+
         //#define SWAP(a,b,type)
         //    do { type tmp_=(a); (a)=(b); (b)=tmp_; } while(0)
         internal static void Swap<T>(ref T a, ref T b)
@@ -351,6 +351,23 @@ namespace PocketFFT
         {
             a.r = b.r + c.r;
             a.i = b.i + c.i;
+        }
+        internal static void SUBC(ref cmplx a, ref cmplx b, ref cmplx c)
+        {
+            a.r = b.r - c.r;
+            a.i = b.i - c.i;
+        }
+
+        internal static void ADDCSCALED(ref cmplx a, ref cmplx b, double scale, ref cmplx c)
+        {
+            a.r = b.r + scale * c.r;
+            a.i = b.i + scale * c.i;
+        }
+
+        internal static void CPROJECT(ref cmplx a, double scale, ref cmplx b)
+        {
+            a.r = -(scale * b.i);
+            a.i = scale * b.r;
         }
 
         //#define SCALEC(a,b) { a.r*=b; a.i*=b; }

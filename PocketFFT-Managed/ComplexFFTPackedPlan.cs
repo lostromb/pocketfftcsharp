@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Buffers;
 using System.Collections.Generic;
 using System.Numerics;
 using System.Runtime.InteropServices;
@@ -75,12 +76,18 @@ namespace PocketFFT
             }
 
             int tws = cfftp_twsize();
-            this.mem = new cmplx[tws];
+            this.mem = ArrayPool<cmplx>.Shared.Rent(tws);
 
             cfftp_comp_twiddle();
         }
 
-        public void Dispose() { }
+        public void Dispose()
+        {
+            if (this.mem != null)
+            {
+                ArrayPool<cmplx>.Shared.Return(this.mem);
+            }
+        }
 
         public void Forward(Span<cmplx> c, double fct)
         {
@@ -170,7 +177,7 @@ namespace PocketFFT
         private void cfftp_comp_twiddle()
         {
             int length = this.length;
-            double[] twid = new double[2 * length];
+            Span<double> twid = new double[2 * length];
             Intrinsics.sincos_2pibyn(length, twid);
             int l1 = 1;
             int memofs = 0;
@@ -212,8 +219,10 @@ namespace PocketFFT
 
             int len = this.length;
             int l1 = 1, nf = nfct;
-            Span<cmplx> ch = new cmplx[len];
-            Span<cmplx> p1 = c, p2 = ch;
+            cmplx[] scratchArray = ArrayPool<cmplx>.Shared.Rent(len);
+            Span<cmplx> ch = scratchArray;
+            Span<cmplx> p1 = c;
+            Span<cmplx> p2 = ch;
 
             for (int k1 = 0; k1 < nf; k1++)
             {
@@ -315,7 +324,7 @@ namespace PocketFFT
                     int endIdx = len * 2;
                     if (Vector.IsHardwareAccelerated)
                     {
-                        int vectorEndIdx = endIdx - (endIdx % Vector<double>.Count);
+                        int vectorEndIdx = endIdx - ((len * 2) % Vector<double>.Count);
                         while (idx < vectorEndIdx)
                         {
                             Span<double> slice = cmplxComponents.Slice(idx, Vector<double>.Count);
@@ -337,9 +346,10 @@ namespace PocketFFT
 #endif
                 }
             }
+
+            ArrayPool<cmplx>.Shared.Return(scratchArray);
         }
 
-#if OPTIMIZE
         private static void pass2b(int ido, int l1, Span<cmplx> cc, Span<cmplx> ch, Span<cmplx> wa)
         {
             const int cdim = 2;
@@ -381,76 +391,44 @@ namespace PocketFFT
                 }
             }
         }
-#else
-        private static void pass2b(int ido, int l1, Span<cmplx> cc, Span<cmplx> ch, Span<cmplx> wa)
-        {
-            const int cdim = 2;
-            if (Constants.NAIL_TEST) NailTest.PrintComplexArray(cc.Slice(0, cdim * l1));
-            if (ido == 1)
-            {
-                for (int k = 0; k < l1; ++k)
-                {
-                    ch[(0) + ido * ((k) + l1 * (0))].r = cc[(0) + ido * ((0) + cdim * (k))].r + cc[(0) + ido * ((1) + cdim * (k))].r;
-                    ch[(0) + ido * ((k) + l1 * (0))].i = cc[(0) + ido * ((0) + cdim * (k))].i + cc[(0) + ido * ((1) + cdim * (k))].i;
-                    ch[(0) + ido * ((k) + l1 * (1))].r = cc[(0) + ido * ((0) + cdim * (k))].r - cc[(0) + ido * ((1) + cdim * (k))].r;
-                    ch[(0) + ido * ((k) + l1 * (1))].i = cc[(0) + ido * ((0) + cdim * (k))].i - cc[(0) + ido * ((1) + cdim * (k))].i;
-                }
-            }
-            else
-            {
-                for (int k = 0; k < l1; ++k)
-                {
-                    ch[(0) + ido * ((k) + l1 * (0))].r = cc[(0) + ido * ((0) + cdim * (k))].r + cc[(0) + ido * ((1) + cdim * (k))].r;
-                    ch[(0) + ido * ((k) + l1 * (0))].i = cc[(0) + ido * ((0) + cdim * (k))].i + cc[(0) + ido * ((1) + cdim * (k))].i;
-                    ch[(0) + ido * ((k) + l1 * (1))].r = cc[(0) + ido * ((0) + cdim * (k))].r - cc[(0) + ido * ((1) + cdim * (k))].r;
-                    ch[(0) + ido * ((k) + l1 * (1))].i = cc[(0) + ido * ((0) + cdim * (k))].i - cc[(0) + ido * ((1) + cdim * (k))].i;
-
-                    for (int i = 1; i < ido; ++i)
-                    {
-                        cmplx t;
-                        ch[(i) + ido * ((k) + l1 * (0))].r = cc[(i) + ido * ((0) + cdim * (k))].r + cc[(i) + ido * ((1) + cdim * (k))].r;
-                        ch[(i) + ido * ((k) + l1 * (0))].i = cc[(i) + ido * ((0) + cdim * (k))].i + cc[(i) + ido * ((1) + cdim * (k))].i;
-                        t.r = cc[(i) + ido * ((0) + cdim * (k))].r - cc[(i) + ido * ((1) + cdim * (k))].r;
-                        t.i = cc[(i) + ido * ((0) + cdim * (k))].i - cc[(i) + ido * ((1) + cdim * (k))].i;
-                        ch[(i) + ido * ((k) + l1 * (1))].r = wa[(i) - 1 + (0) * (ido - 1)].r * t.r - wa[(i) - 1 + (0) * (ido - 1)].i * t.i;
-                        ch[(i) + ido * ((k) + l1 * (1))].i = wa[(i) - 1 + (0) * (ido - 1)].r * t.i + wa[(i) - 1 + (0) * (ido - 1)].i * t.r;
-                    }
-                }
-            }
-        }
-#endif
 
         private static void pass2f(int ido, int l1, Span<cmplx> cc, Span<cmplx> ch, Span<cmplx> wa)
         {
             const int cdim = 2;
-            if (Constants.NAIL_TEST) NailTest.PrintComplexArray(cc.Slice(0, cdim * l1));
+
             if (ido == 1)
             {
                 for (int k = 0; k < l1; ++k)
                 {
-                    ch[(0) + ido * ((k) + l1 * (0))].r = cc[(0) + ido * ((0) + cdim * (k))].r + cc[(0) + ido * ((1) + cdim * (k))].r;
-                    ch[(0) + ido * ((k) + l1 * (0))].i = cc[(0) + ido * ((0) + cdim * (k))].i + cc[(0) + ido * ((1) + cdim * (k))].i;
-                    ch[(0) + ido * ((k) + l1 * (1))].r = cc[(0) + ido * ((0) + cdim * (k))].r - cc[(0) + ido * ((1) + cdim * (k))].r;
-                    ch[(0) + ido * ((k) + l1 * (1))].i = cc[(0) + ido * ((0) + cdim * (k))].i - cc[(0) + ido * ((1) + cdim * (k))].i;
+                    Intrinsics.PMC(
+                        ref ch[(0) + ido * ((k) + l1 * (0))],
+                        ref ch[(0) + ido * ((k) + l1 * (1))],
+                        ref cc[(0) + ido * ((0) + cdim * (k))],
+                        ref cc[(0) + ido * ((1) + cdim * (k))]);
                 }
             }
             else
             {
                 for (int k = 0; k < l1; ++k)
                 {
-                    ch[(0) + ido * ((k) + l1 * (0))].r = cc[(0) + ido * ((0) + cdim * (k))].r + cc[(0) + ido * ((1) + cdim * (k))].r;
-                    ch[(0) + ido * ((k) + l1 * (0))].i = cc[(0) + ido * ((0) + cdim * (k))].i + cc[(0) + ido * ((1) + cdim * (k))].i;
-                    ch[(0) + ido * ((k) + l1 * (1))].r = cc[(0) + ido * ((0) + cdim * (k))].r - cc[(0) + ido * ((1) + cdim * (k))].r;
-                    ch[(0) + ido * ((k) + l1 * (1))].i = cc[(0) + ido * ((0) + cdim * (k))].i - cc[(0) + ido * ((1) + cdim * (k))].i;
+                    Intrinsics.PMC(
+                        ref ch[(0) + ido * ((k) + l1 * (0))],
+                        ref ch[(0) + ido * ((k) + l1 * (1))],
+                        ref cc[(0) + ido * ((0) + cdim * (k))],
+                        ref cc[(0) + ido * ((1) + cdim * (k))]);
+
                     for (int i = 1; i < ido; ++i)
                     {
-                        cmplx t;
-                        ch[(i) + ido * ((k) + l1 * (0))].r = cc[(i) + ido * ((0) + cdim * (k))].r + cc[(i) + ido * ((1) + cdim * (k))].r;
-                        ch[(i) + ido * ((k) + l1 * (0))].i = cc[(i) + ido * ((0) + cdim * (k))].i + cc[(i) + ido * ((1) + cdim * (k))].i;
-                        t.r = cc[(i) + ido * ((0) + cdim * (k))].r - cc[(i) + ido * ((1) + cdim * (k))].r;
-                        t.i = cc[(i) + ido * ((0) + cdim * (k))].i - cc[(i) + ido * ((1) + cdim * (k))].i;
-                        ch[(i) + ido * ((k) + l1 * (1))].r = wa[(i) - 1 + (0) * (ido - 1)].r * t.r + wa[(i) - 1 + (0) * (ido - 1)].i * t.i;
-                        ch[(i) + ido * ((k) + l1 * (1))].i = wa[(i) - 1 + (0) * (ido - 1)].r * t.i - wa[(i) - 1 + (0) * (ido - 1)].i * t.r;
+                        cmplx t = default;
+                        Intrinsics.PMC(
+                            ref ch[(i) + ido * ((k) + l1 * (0))],
+                            ref t,
+                            ref cc[(i) + ido * ((0) + cdim * (k))],
+                            ref cc[(i) + ido * ((1) + cdim * (k))]);
+                        Intrinsics.A_EQ_CB_MUL_C(
+                            ref ch[(i) + ido * ((k) + l1 * (1))],
+                            ref wa[(i) - 1 + (0) * (ido - 1)],
+                            ref t);
                     }
                 }
             }
@@ -460,73 +438,70 @@ namespace PocketFFT
         {
             const int cdim = 3;
             const double tw1r = -0.5, tw1i = 0.86602540378443864676;
-            if (Constants.NAIL_TEST) NailTest.PrintComplexArray(cc.Slice(0, cdim * l1));
             if (ido == 1)
             {
                 for (int k = 0; k < l1; ++k)
                 {
-                    cmplx t0 = cc[(0) + ido * ((0) + cdim * (k))], t1, t2;
-                    t1.r = cc[(0) + ido * ((1) + cdim * (k))].r + cc[(0) + ido * ((2) + cdim * (k))].r;
-                    t1.i = cc[(0) + ido * ((1) + cdim * (k))].i + cc[(0) + ido * ((2) + cdim * (k))].i;
-                    t2.r = cc[(0) + ido * ((1) + cdim * (k))].r - cc[(0) + ido * ((2) + cdim * (k))].r;
-                    t2.i = cc[(0) + ido * ((1) + cdim * (k))].i - cc[(0) + ido * ((2) + cdim * (k))].i;
-                    ch[(0) + ido * ((k) + l1 * (0))].r = t0.r + t1.r;
-                    ch[(0) + ido * ((k) + l1 * (0))].i = t0.i + t1.i;
-                    cmplx ca, cb;
-                    ca.r = t0.r + tw1r * t1.r; ca.i = t0.i + tw1r * t1.i;
-                    cb.i = tw1i * t2.r;
-                    cb.r = -(tw1i * t2.i);
-                    ch[(0) + ido * ((k) + l1 * (1))].r = ca.r + cb.r;
-                    ch[(0) + ido * ((k) + l1 * (1))].i = ca.i + cb.i;
-                    ch[(0) + ido * ((k) + l1 * (2))].r = ca.r - cb.r;
-                    ch[(0) + ido * ((k) + l1 * (2))].i = ca.i - cb.i;
+                    cmplx t0 = cc[(0) + ido * ((0) + cdim * (k))],
+                        t1 = default, t2 = default,
+                        ca = default, cb = default;
+                    Intrinsics.PMC(
+                        ref t1,
+                        ref t2,
+                        ref cc[(0) + ido * ((1) + cdim * (k))],
+                        ref cc[(0) + ido * ((2) + cdim * (k))]);
+                    Intrinsics.ADDC(ref ch[(0) + ido * ((k) + l1 * (0))], ref t0, ref t1);
+                    Intrinsics.ADDCSCALED(ref ca, ref t0, tw1r, ref t1);
+                    Intrinsics.CPROJECT(ref cb, tw1i, ref t2);
+                    Intrinsics.PMC(
+                        ref ch[(0) + ido * ((k) + l1 * (1))],
+                        ref ch[(0) + ido * ((k) + l1 * (2))],
+                        ref ca,
+                        ref cb);
                 }
             }
             else
             {
                 for (int k = 0; k < l1; ++k)
                 {
-                    {
-                        cmplx t0 = cc[(0) + ido * ((0) + cdim * (k))], t1, t2;
-                        t1.r = cc[(0) + ido * ((1) + cdim * (k))].r + cc[(0) + ido * ((2) + cdim * (k))].r;
-                        t1.i = cc[(0) + ido * ((1) + cdim * (k))].i + cc[(0) + ido * ((2) + cdim * (k))].i;
-                        t2.r = cc[(0) + ido * ((1) + cdim * (k))].r - cc[(0) + ido * ((2) + cdim * (k))].r;
-                        t2.i = cc[(0) + ido * ((1) + cdim * (k))].i - cc[(0) + ido * ((2) + cdim * (k))].i;
-                        ch[(0) + ido * ((k) + l1 * (0))].r = t0.r + t1.r;
-                        ch[(0) + ido * ((k) + l1 * (0))].i = t0.i + t1.i;
-                        cmplx ca, cb;
-                        ca.r = t0.r + tw1r * t1.r;
-                        ca.i = t0.i + tw1r * t1.i;
-                        cb.i = tw1i * t2.r;
-                        cb.r = -(tw1i * t2.i);
-                        ch[(0) + ido * ((k) + l1 * (1))].r = ca.r + cb.r;
-                        ch[(0) + ido * ((k) + l1 * (1))].i = ca.i + cb.i;
-                        ch[(0) + ido * ((k) + l1 * (2))].r = ca.r - cb.r;
-                        ch[(0) + ido * ((k) + l1 * (2))].i = ca.i - cb.i;
-                    }
+                    cmplx t0 = cc[(0) + ido * ((0) + cdim * (k))],
+                        t1 = default, t2 = default,
+                        ca = default, cb = default,
+                        da = default, db = default;
+                    Intrinsics.PMC(
+                        ref t1,
+                        ref t2,
+                        ref cc[(0) + ido * ((1) + cdim * (k))],
+                        ref cc[(0) + ido * ((2) + cdim * (k))]);
+                    Intrinsics.ADDC(ref ch[(0) + ido * ((k) + l1 * (0))], ref t0, ref t1);
+                    Intrinsics.ADDCSCALED(ref ca, ref t0, tw1r, ref t1);
+                    Intrinsics.CPROJECT(ref cb, tw1i, ref t2);
+                    Intrinsics.PMC(
+                        ref ch[(0) + ido * ((k) + l1 * (1))],
+                        ref ch[(0) + ido * ((k) + l1 * (2))],
+                        ref ca,
+                        ref cb);
 
                     for (int i = 1; i < ido; ++i)
                     {
-                        cmplx t0 = cc[(i) + ido * ((0) + cdim * (k))], t1, t2;
-                        t1.r = cc[(i) + ido * ((1) + cdim * (k))].r + cc[(i) + ido * ((2) + cdim * (k))].r;
-                        t1.i = cc[(i) + ido * ((1) + cdim * (k))].i + cc[(i) + ido * ((2) + cdim * (k))].i;
-                        t2.r = cc[(i) + ido * ((1) + cdim * (k))].r - cc[(i) + ido * ((2) + cdim * (k))].r;
-                        t2.i = cc[(i) + ido * ((1) + cdim * (k))].i - cc[(i) + ido * ((2) + cdim * (k))].i;
-                        ch[(i) + ido * ((k) + l1 * (0))].r = t0.r + t1.r;
-                        ch[(i) + ido * ((k) + l1 * (0))].i = t0.i + t1.i;
-                        cmplx ca, cb, da, db;
-                        ca.r = t0.r + tw1r * t1.r;
-                        ca.i = t0.i + tw1r * t1.i;
-                        cb.i = tw1i * t2.r;
-                        cb.r = -(tw1i * t2.i);
-                        da.r = ca.r + cb.r;
-                        da.i = ca.i + cb.i;
-                        db.r = ca.r - cb.r;
-                        db.i = ca.i - cb.i;
-                        ch[(i) + ido * ((k) + l1 * (1))].r = wa[(i) - 1 + (1 - 1) * (ido - 1)].r * da.r - wa[(i) - 1 + (1 - 1) * (ido - 1)].i * da.i;
-                        ch[(i) + ido * ((k) + l1 * (1))].i = wa[(i) - 1 + (1 - 1) * (ido - 1)].r * da.i + wa[(i) - 1 + (1 - 1) * (ido - 1)].i * da.r;
-                        ch[(i) + ido * ((k) + l1 * (2))].r = wa[(i) - 1 + (2 - 1) * (ido - 1)].r * db.r - wa[(i) - 1 + (2 - 1) * (ido - 1)].i * db.i;
-                        ch[(i) + ido * ((k) + l1 * (2))].i = wa[(i) - 1 + (2 - 1) * (ido - 1)].r * db.i + wa[(i) - 1 + (2 - 1) * (ido - 1)].i * db.r;
+                        t0 = cc[(i) + ido * ((0) + cdim * (k))];
+                        Intrinsics.PMC(
+                            ref t1,
+                            ref t2,
+                            ref cc[(i) + ido * ((1) + cdim * (k))],
+                            ref cc[(i) + ido * ((2) + cdim * (k))]);
+                        Intrinsics.ADDC(ref ch[(i) + ido * ((k) + l1 * (0))], ref t0, ref t1);
+                        Intrinsics.ADDCSCALED(ref ca, ref t0, tw1r, ref t1);
+                        Intrinsics.CPROJECT(ref cb, tw1i, ref t2);
+                        Intrinsics.PMC(ref da, ref db, ref ca, ref cb);
+                        Intrinsics.A_EQ_B_MUL_C(
+                            ref ch[(i) + ido * ((k) + l1 * (1))],
+                            ref wa[(i) - 1 + (1 - 1) * (ido - 1)],
+                            ref da);
+                        Intrinsics.A_EQ_B_MUL_C(
+                            ref ch[(i) + ido * ((k) + l1 * (2))],
+                            ref wa[(i) - 1 + (2 - 1) * (ido - 1)],
+                            ref db);
                     }
                 }
             }
@@ -537,72 +512,71 @@ namespace PocketFFT
             const int cdim = 3;
             const double tw1r = -0.5, tw1i = -0.86602540378443864676;
 
-            if (Constants.NAIL_TEST) NailTest.PrintComplexArray(cc.Slice(0, cdim * l1));
             if (ido == 1)
             {
                 for (int k = 0; k < l1; ++k)
                 {
-                    cmplx t0 = cc[(0) + ido * ((0) + cdim * (k))], t1, t2;
-                    t1.r = cc[(0) + ido * ((1) + cdim * (k))].r + cc[(0) + ido * ((2) + cdim * (k))].r;
-                    t1.i = cc[(0) + ido * ((1) + cdim * (k))].i + cc[(0) + ido * ((2) + cdim * (k))].i;
-                    t2.r = cc[(0) + ido * ((1) + cdim * (k))].r - cc[(0) + ido * ((2) + cdim * (k))].r;
-                    t2.i = cc[(0) + ido * ((1) + cdim * (k))].i - cc[(0) + ido * ((2) + cdim * (k))].i;
-                    ch[(0) + ido * ((k) + l1 * (0))].r = t0.r + t1.r;
-                    ch[(0) + ido * ((k) + l1 * (0))].i = t0.i + t1.i;
-                    cmplx ca, cb;
-                    ca.r = t0.r + tw1r * t1.r;
-                    ca.i = t0.i + tw1r * t1.i;
-                    cb.i = tw1i * t2.r;
-                    cb.r = -(tw1i * t2.i);
-                    ch[(0) + ido * ((k) + l1 * (1))].r = ca.r + cb.r;
-                    ch[(0) + ido * ((k) + l1 * (1))].i = ca.i + cb.i;
-                    ch[(0) + ido * ((k) + l1 * (2))].r = ca.r - cb.r;
-                    ch[(0) + ido * ((k) + l1 * (2))].i = ca.i - cb.i;
+                    cmplx t0 = cc[(0) + ido * ((0) + cdim * (k))],
+                        t1 = default, t2 = default,
+                        ca = default, cb = default;
+                    Intrinsics.PMC(
+                        ref t1,
+                        ref t2,
+                        ref cc[(0) + ido * ((1) + cdim * (k))],
+                        ref cc[(0) + ido * ((2) + cdim * (k))]);
+                    Intrinsics.ADDC(ref ch[(0) + ido * ((k) + l1 * (0))], ref t0, ref t1);
+                    Intrinsics.ADDCSCALED(ref ca, ref t0, tw1r, ref t1);
+                    Intrinsics.CPROJECT(ref cb, tw1i, ref t2);
+                    Intrinsics.PMC(
+                        ref ch[(0) + ido * ((k) + l1 * (1))],
+                        ref ch[(0) + ido * ((k) + l1 * (2))],
+                        ref ca,
+                        ref cb);
                 }
             }
             else
             {
                 for (int k = 0; k < l1; ++k)
                 {
-                    cmplx t0 = cc[(0) + ido * ((0) + cdim * (k))], t1, t2;
-                    t1.r = cc[(0) + ido * ((1) + cdim * (k))].r + cc[(0) + ido * ((2) + cdim * (k))].r;
-                    t1.i = cc[(0) + ido * ((1) + cdim * (k))].i + cc[(0) + ido * ((2) + cdim * (k))].i;
-                    t2.r = cc[(0) + ido * ((1) + cdim * (k))].r - cc[(0) + ido * ((2) + cdim * (k))].r;
-                    t2.i = cc[(0) + ido * ((1) + cdim * (k))].i - cc[(0) + ido * ((2) + cdim * (k))].i;
-                    ch[(0) + ido * ((k) + l1 * (0))].r = t0.r + t1.r;
-                    ch[(0) + ido * ((k) + l1 * (0))].i = t0.i + t1.i;
-                    cmplx ca, cb;
-                    ca.r = t0.r + tw1r * t1.r;
-                    ca.i = t0.i + tw1r * t1.i;
-                    cb.i = tw1i * t2.r;
-                    cb.r = -(tw1i * t2.i);
-                    ch[(0) + ido * ((k) + l1 * (1))].r = ca.r + cb.r;
-                    ch[(0) + ido * ((k) + l1 * (1))].i = ca.i + cb.i;
-                    ch[(0) + ido * ((k) + l1 * (2))].r = ca.r - cb.r;
-                    ch[(0) + ido * ((k) + l1 * (2))].i = ca.i - cb.i;
+                    cmplx t0 = cc[(0) + ido * ((0) + cdim * (k))],
+                        t1 = default, t2 = default,
+                        ca = default, cb = default,
+                        da = default, db = default;
+
+                    Intrinsics.PMC(
+                        ref t1,
+                        ref t2,
+                        ref cc[(0) + ido * ((1) + cdim * (k))],
+                        ref cc[(0) + ido * ((2) + cdim * (k))]);
+                    Intrinsics.ADDC(ref ch[(0) + ido * ((k) + l1 * (0))], ref t0, ref t1);
+                    Intrinsics.ADDCSCALED(ref ca, ref t0, tw1r, ref t1);
+                    Intrinsics.CPROJECT(ref cb, tw1i, ref t2);
+                    Intrinsics.PMC(
+                        ref ch[(0) + ido * ((k) + l1 * (1))],
+                        ref ch[(0) + ido * ((k) + l1 * (2))],
+                        ref ca,
+                        ref cb);
 
                     for (int i = 1; i < ido; ++i)
                     {
-                        cmplx t3 = cc[(i) + ido * ((0) + cdim * (k))], t4, t5;
-                        t4.r = cc[(i) + ido * ((1) + cdim * (k))].r + cc[(i) + ido * ((2) + cdim * (k))].r;
-                        t4.i = cc[(i) + ido * ((1) + cdim * (k))].i + cc[(i) + ido * ((2) + cdim * (k))].i;
-                        t5.r = cc[(i) + ido * ((1) + cdim * (k))].r - cc[(i) + ido * ((2) + cdim * (k))].r;
-                        t5.i = cc[(i) + ido * ((1) + cdim * (k))].i - cc[(i) + ido * ((2) + cdim * (k))].i;
-                        ch[(i) + ido * ((k) + l1 * (0))].r = t3.r + t4.r;
-                        ch[(i) + ido * ((k) + l1 * (0))].i = t3.i + t4.i;
-                        cmplx ca2, cb2, da, db;
-                        ca2.r = t3.r + tw1r * t4.r;
-                        ca2.i = t3.i + tw1r * t4.i;
-                        cb2.i = tw1i * t5.r;
-                        cb2.r = -(tw1i * t5.i);
-                        da.r = ca2.r + cb2.r;
-                        da.i = ca2.i + cb2.i;
-                        db.r = ca2.r - cb2.r;
-                        db.i = ca2.i - cb2.i;
-                        ch[(i) + ido * ((k) + l1 * (1))].r = wa[(i) - 1 + (1 - 1) * (ido - 1)].r * da.r + wa[(i) - 1 + (1 - 1) * (ido - 1)].i * da.i;
-                        ch[(i) + ido * ((k) + l1 * (1))].i = wa[(i) - 1 + (1 - 1) * (ido - 1)].r * da.i - wa[(i) - 1 + (1 - 1) * (ido - 1)].i * da.r;
-                        ch[(i) + ido * ((k) + l1 * (2))].r = wa[(i) - 1 + (2 - 1) * (ido - 1)].r * db.r + wa[(i) - 1 + (2 - 1) * (ido - 1)].i * db.i;
-                        ch[(i) + ido * ((k) + l1 * (2))].i = wa[(i) - 1 + (2 - 1) * (ido - 1)].r * db.i - wa[(i) - 1 + (2 - 1) * (ido - 1)].i * db.r;
+                        t0 = cc[(i) + ido * ((0) + cdim * (k))];
+                        Intrinsics.PMC(
+                            ref t1,
+                            ref t2,
+                            ref cc[(i) + ido * ((1) + cdim * (k))],
+                            ref cc[(i) + ido * ((2) + cdim * (k))]);
+                        Intrinsics.ADDC(ref ch[(i) + ido * ((k) + l1 * (0))], ref t0, ref t1);
+                        Intrinsics.ADDCSCALED(ref ca, ref t0, tw1r, ref t1);
+                        Intrinsics.CPROJECT(ref cb, tw1i, ref t2);
+                        Intrinsics.PMC(ref da, ref db, ref ca, ref cb);
+                        Intrinsics.A_EQ_CB_MUL_C(
+                            ref ch[(i) + ido * ((k) + l1 * (1))],
+                            ref wa[(i) - 1 + (1 - 1) * (ido - 1)],
+                            ref da);
+                        Intrinsics.A_EQ_CB_MUL_C(
+                            ref ch[(i) + ido * ((k) + l1 * (2))],
+                            ref wa[(i) - 1 + (2 - 1) * (ido - 1)],
+                            ref db);
                     }
                 }
             }
@@ -611,90 +585,80 @@ namespace PocketFFT
         private static void pass4b(int ido, int l1, Span<cmplx> cc, Span<cmplx> ch, Span<cmplx> wa)
         {
             const int cdim = 4;
-            if (Constants.NAIL_TEST) NailTest.PrintComplexArray(cc.Slice(0, cdim * l1));
+
             if (ido == 1)
             {
                 for (int k = 0; k < l1; ++k)
                 {
-                    cmplx t1, t2, t3, t4;
-                    t2.r = cc[(0) + ido * ((0) + cdim * (k))].r + cc[(0) + ido * ((2) + cdim * (k))].r;
-                    t2.i = cc[(0) + ido * ((0) + cdim * (k))].i + cc[(0) + ido * ((2) + cdim * (k))].i;
-                    t1.r = cc[(0) + ido * ((0) + cdim * (k))].r - cc[(0) + ido * ((2) + cdim * (k))].r;
-                    t1.i = cc[(0) + ido * ((0) + cdim * (k))].i - cc[(0) + ido * ((2) + cdim * (k))].i;
-                    t3.r = cc[(0) + ido * ((1) + cdim * (k))].r + cc[(0) + ido * ((3) + cdim * (k))].r;
-                    t3.i = cc[(0) + ido * ((1) + cdim * (k))].i + cc[(0) + ido * ((3) + cdim * (k))].i;
-                    t4.r = cc[(0) + ido * ((1) + cdim * (k))].r - cc[(0) + ido * ((3) + cdim * (k))].r;
-                    t4.i = cc[(0) + ido * ((1) + cdim * (k))].i - cc[(0) + ido * ((3) + cdim * (k))].i;
+                    cmplx t1 = default, t2 = default, t3 = default, t4 = default;
+                    Intrinsics.PMC(
+                        ref t2,
+                        ref t1,
+                        ref cc[(0) + ido * ((0) + cdim * (k))],
+                        ref cc[(0) + ido * ((2) + cdim * (k))]);
+                    Intrinsics.PMC(
+                        ref t3,
+                        ref t4,
+                        ref cc[(0) + ido * ((1) + cdim * (k))],
+                        ref cc[(0) + ido * ((3) + cdim * (k))]);
                     Intrinsics.ROT90(ref t4);
-
-                    ch[(0) + ido * ((k) + l1 * (0))].r = t2.r + t3.r;
-                    ch[(0) + ido * ((k) + l1 * (0))].i = t2.i + t3.i;
-                    ch[(0) + ido * ((k) + l1 * (2))].r = t2.r - t3.r;
-                    ch[(0) + ido * ((k) + l1 * (2))].i = t2.i - t3.i;
-                    ch[(0) + ido * ((k) + l1 * (1))].r = t1.r + t4.r;
-                    ch[(0) + ido * ((k) + l1 * (1))].i = t1.i + t4.i;
-                    ch[(0) + ido * ((k) + l1 * (3))].r = t1.r - t4.r;
-                    ch[(0) + ido * ((k) + l1 * (3))].i = t1.i - t4.i;
+                    Intrinsics.PMC(
+                        ref ch[(0) + ido * ((k) + l1 * (0))],
+                        ref ch[(0) + ido * ((k) + l1 * (2))],
+                        ref t2,
+                        ref t3);
+                    Intrinsics.PMC(
+                        ref ch[(0) + ido * ((k) + l1 * (1))],
+                        ref ch[(0) + ido * ((k) + l1 * (3))],
+                        ref t1,
+                        ref t4);
                 }
             }
             else
             {
                 for (int k = 0; k < l1; ++k)
                 {
-                    cmplx t1, t2, t3, t4;
-                    t2.r = cc[(0) + ido * ((0) + cdim * (k))].r + cc[(0) + ido * ((2) + cdim * (k))].r;
-                    t2.i = cc[(0) + ido * ((0) + cdim * (k))].i + cc[(0) + ido * ((2) + cdim * (k))].i;
-                    t1.r = cc[(0) + ido * ((0) + cdim * (k))].r - cc[(0) + ido * ((2) + cdim * (k))].r;
-                    t1.i = cc[(0) + ido * ((0) + cdim * (k))].i - cc[(0) + ido * ((2) + cdim * (k))].i;
-                    t3.r = cc[(0) + ido * ((1) + cdim * (k))].r + cc[(0) + ido * ((3) + cdim * (k))].r;
-                    t3.i = cc[(0) + ido * ((1) + cdim * (k))].i + cc[(0) + ido * ((3) + cdim * (k))].i;
-                    t4.r = cc[(0) + ido * ((1) + cdim * (k))].r - cc[(0) + ido * ((3) + cdim * (k))].r;
-                    t4.i = cc[(0) + ido * ((1) + cdim * (k))].i - cc[(0) + ido * ((3) + cdim * (k))].i;
+                    cmplx t1 = default, t2 = default, t3 = default, t4 = default;
+                    Intrinsics.PMC(
+                        ref t2,
+                        ref t1,
+                        ref cc[(0) + ido * ((0) + cdim * (k))],
+                        ref cc[(0) + ido * ((2) + cdim * (k))]);
+                    Intrinsics.PMC(
+                        ref t3,
+                        ref t4,
+                        ref cc[(0) + ido * ((1) + cdim * (k))],
+                        ref cc[(0) + ido * ((3) + cdim * (k))]);
                     Intrinsics.ROT90(ref t4);
-
-                    ch[(0) + ido * ((k) + l1 * (0))].r = t2.r + t3.r;
-                    ch[(0) + ido * ((k) + l1 * (0))].i = t2.i + t3.i;
-                    ch[(0) + ido * ((k) + l1 * (2))].r = t2.r - t3.r;
-                    ch[(0) + ido * ((k) + l1 * (2))].i = t2.i - t3.i;
-                    ch[(0) + ido * ((k) + l1 * (1))].r = t1.r + t4.r;
-                    ch[(0) + ido * ((k) + l1 * (1))].i = t1.i + t4.i;
-                    ch[(0) + ido * ((k) + l1 * (3))].r = t1.r - t4.r;
-                    ch[(0) + ido * ((k) + l1 * (3))].i = t1.i - t4.i;
+                    Intrinsics.PMC(
+                        ref ch[(0) + ido * ((k) + l1 * (0))],
+                        ref ch[(0) + ido * ((k) + l1 * (2))],
+                        ref t2,
+                        ref t3);
+                    Intrinsics.PMC(
+                        ref ch[(0) + ido * ((k) + l1 * (1))],
+                        ref ch[(0) + ido * ((k) + l1 * (3))],
+                        ref t1,
+                        ref t4);
 
                     for (int i = 1; i < ido; ++i)
                     {
-                        cmplx c2, c3, c4, t5, t6, t7, t8;
+                        cmplx c2 = default, c3 = default, c4 = default;
                         cmplx cc0 = cc[(i) + ido * ((0) + cdim * (k))],
                             cc1 = cc[(i) + ido * ((1) + cdim * (k))],
                             cc2 = cc[(i) + ido * ((2) + cdim * (k))],
                             cc3 = cc[(i) + ido * ((3) + cdim * (k))];
-                        t6.r = cc0.r + cc2.r;
-                        t6.i = cc0.i + cc2.i;
-                        t5.r = cc0.r - cc2.r;
-                        t5.i = cc0.i - cc2.i;
-                        t7.r = cc1.r + cc3.r;
-                        t7.i = cc1.i + cc3.i;
-                        t8.r = cc1.r - cc3.r;
-                        t8.i = cc1.i - cc3.i;
-                        Intrinsics.ROT90(ref t8);
-
+                        Intrinsics.PMC(ref t2, ref t1, ref cc0, ref cc2);
+                        Intrinsics.PMC(ref t3, ref t4, ref cc1, ref cc3);
+                        Intrinsics.ROT90(ref t4);
                         cmplx wa0 = wa[(i) - 1 + (0) * (ido - 1)],
-                        wa1 = wa[(i) - 1 + (1) * (ido - 1)],
-                        wa2 = wa[(i) - 1 + (2) * (ido - 1)];
-                        ch[(i) + ido * ((k) + l1 * (0))].r = t6.r + t7.r;
-                        ch[(i) + ido * ((k) + l1 * (0))].i = t6.i + t7.i;
-                        c3.r = t6.r - t7.r;
-                        c3.i = t6.i - t7.i;
-                        c2.r = t5.r + t8.r;
-                        c2.i = t5.i + t8.i;
-                        c4.r = t5.r - t8.r;
-                        c4.i = t5.i - t8.i;
-                        ch[(i) + ido * ((k) + l1 * (1))].r = wa0.r * c2.r - wa0.i * c2.i;
-                        ch[(i) + ido * ((k) + l1 * (1))].i = wa0.r * c2.i + wa0.i * c2.r;
-                        ch[(i) + ido * ((k) + l1 * (2))].r = wa1.r * c3.r - wa1.i * c3.i;
-                        ch[(i) + ido * ((k) + l1 * (2))].i = wa1.r * c3.i + wa1.i * c3.r;
-                        ch[(i) + ido * ((k) + l1 * (3))].r = wa2.r * c4.r - wa2.i * c4.i;
-                        ch[(i) + ido * ((k) + l1 * (3))].i = wa2.r * c4.i + wa2.i * c4.r;
+                            wa1 = wa[(i) - 1 + (1) * (ido - 1)],
+                            wa2 = wa[(i) - 1 + (2) * (ido - 1)];
+                        Intrinsics.PMC(ref ch[(i) + ido * ((k) + l1 * (0))], ref c3, ref t2, ref t3);
+                        Intrinsics.PMC(ref c2, ref c4, ref t1, ref t4);
+                        Intrinsics.A_EQ_B_MUL_C(ref ch[(i) + ido * ((k) + l1 * (1))], ref wa0, ref c2);
+                        Intrinsics.A_EQ_B_MUL_C(ref ch[(i) + ido * ((k) + l1 * (2))], ref wa1, ref c3);
+                        Intrinsics.A_EQ_B_MUL_C(ref ch[(i) + ido * ((k) + l1 * (3))], ref wa2, ref c4);
                     }
                 }
             }
@@ -704,89 +668,79 @@ namespace PocketFFT
         {
             const int cdim = 4;
 
-            if (Constants.NAIL_TEST) NailTest.PrintComplexArray(cc.Slice(0, cdim * l1));
             if (ido == 1)
             {
                 for (int k = 0; k < l1; ++k)
                 {
-                    cmplx t1, t2, t3, t4;
-                    t2.r = cc[(0) + ido * ((0) + cdim * (k))].r + cc[(0) + ido * ((2) + cdim * (k))].r;
-                    t2.i = cc[(0) + ido * ((0) + cdim * (k))].i + cc[(0) + ido * ((2) + cdim * (k))].i;
-                    t1.r = cc[(0) + ido * ((0) + cdim * (k))].r - cc[(0) + ido * ((2) + cdim * (k))].r;
-                    t1.i = cc[(0) + ido * ((0) + cdim * (k))].i - cc[(0) + ido * ((2) + cdim * (k))].i;
-                    t3.r = cc[(0) + ido * ((1) + cdim * (k))].r + cc[(0) + ido * ((3) + cdim * (k))].r;
-                    t3.i = cc[(0) + ido * ((1) + cdim * (k))].i + cc[(0) + ido * ((3) + cdim * (k))].i;
-                    t4.r = cc[(0) + ido * ((1) + cdim * (k))].r - cc[(0) + ido * ((3) + cdim * (k))].r;
-                    t4.i = cc[(0) + ido * ((1) + cdim * (k))].i - cc[(0) + ido * ((3) + cdim * (k))].i;
+                    cmplx t1 = default, t2 = default, t3 = default, t4 = default;
+                    Intrinsics.PMC(
+                        ref t2,
+                        ref t1,
+                        ref cc[(0) + ido * ((0) + cdim * (k))],
+                        ref cc[(0) + ido * ((2) + cdim * (k))]);
+                    Intrinsics.PMC(
+                        ref t3,
+                        ref t4,
+                        ref cc[(0) + ido * ((1) + cdim * (k))],
+                        ref cc[(0) + ido * ((3) + cdim * (k))]);
                     Intrinsics.ROTM90(ref t4);
-
-                    ch[(0) + ido * ((k) + l1 * (0))].r = t2.r + t3.r;
-                    ch[(0) + ido * ((k) + l1 * (0))].i = t2.i + t3.i;
-                    ch[(0) + ido * ((k) + l1 * (2))].r = t2.r - t3.r;
-                    ch[(0) + ido * ((k) + l1 * (2))].i = t2.i - t3.i;
-                    ch[(0) + ido * ((k) + l1 * (1))].r = t1.r + t4.r;
-                    ch[(0) + ido * ((k) + l1 * (1))].i = t1.i + t4.i;
-                    ch[(0) + ido * ((k) + l1 * (3))].r = t1.r - t4.r;
-                    ch[(0) + ido * ((k) + l1 * (3))].i = t1.i - t4.i;
+                    Intrinsics.PMC(
+                        ref ch[(0) + ido * ((k) + l1 * (0))],
+                        ref ch[(0) + ido * ((k) + l1 * (2))],
+                        ref t2,
+                        ref t3);
+                    Intrinsics.PMC(
+                        ref ch[(0) + ido * ((k) + l1 * (1))],
+                        ref ch[(0) + ido * ((k) + l1 * (3))],
+                        ref t1,
+                        ref t4);
                 }
             }
             else
             {
                 for (int k = 0; k < l1; ++k)
                 {
-                    cmplx t1, t2, t3, t4;
-                    t2.r = cc[(0) + ido * ((0) + cdim * (k))].r + cc[(0) + ido * ((2) + cdim * (k))].r;
-                    t2.i = cc[(0) + ido * ((0) + cdim * (k))].i + cc[(0) + ido * ((2) + cdim * (k))].i;
-                    t1.r = cc[(0) + ido * ((0) + cdim * (k))].r - cc[(0) + ido * ((2) + cdim * (k))].r;
-                    t1.i = cc[(0) + ido * ((0) + cdim * (k))].i - cc[(0) + ido * ((2) + cdim * (k))].i;
-                    t3.r = cc[(0) + ido * ((1) + cdim * (k))].r + cc[(0) + ido * ((3) + cdim * (k))].r;
-                    t3.i = cc[(0) + ido * ((1) + cdim * (k))].i + cc[(0) + ido * ((3) + cdim * (k))].i;
-                    t4.r = cc[(0) + ido * ((1) + cdim * (k))].r - cc[(0) + ido * ((3) + cdim * (k))].r;
-                    t4.i = cc[(0) + ido * ((1) + cdim * (k))].i - cc[(0) + ido * ((3) + cdim * (k))].i;
+                    cmplx t1 = default, t2 = default, t3 = default, t4 = default;
+                    Intrinsics.PMC(
+                        ref t2,
+                        ref t1,
+                        ref cc[(0) + ido * ((0) + cdim * (k))],
+                        ref cc[(0) + ido * ((2) + cdim * (k))]);
+                    Intrinsics.PMC(
+                        ref t3,
+                        ref t4,
+                        ref cc[(0) + ido * ((1) + cdim * (k))],
+                        ref cc[(0) + ido * ((3) + cdim * (k))]);
                     Intrinsics.ROTM90(ref t4);
+                    Intrinsics.PMC(
+                        ref ch[(0) + ido * ((k) + l1 * (0))],
+                        ref ch[(0) + ido * ((k) + l1 * (2))],
+                        ref t2,
+                        ref t3);
+                    Intrinsics.PMC(
+                        ref ch[(0) + ido * ((k) + l1 * (1))],
+                        ref ch[(0) + ido * ((k) + l1 * (3))],
+                        ref t1,
+                        ref t4);
 
-                    ch[(0) + ido * ((k) + l1 * (0))].r = t2.r + t3.r;
-                    ch[(0) + ido * ((k) + l1 * (0))].i = t2.i + t3.i;
-                    ch[(0) + ido * ((k) + l1 * (2))].r = t2.r - t3.r;
-                    ch[(0) + ido * ((k) + l1 * (2))].i = t2.i - t3.i;
-                    ch[(0) + ido * ((k) + l1 * (1))].r = t1.r + t4.r;
-                    ch[(0) + ido * ((k) + l1 * (1))].i = t1.i + t4.i;
-                    ch[(0) + ido * ((k) + l1 * (3))].r = t1.r - t4.r;
-                    ch[(0) + ido * ((k) + l1 * (3))].i = t1.i - t4.i;
                     for (int i = 1; i < ido; ++i)
                     {
-                        cmplx c2, c3, c4, t5, t6, t7, t8;
+                        cmplx c2 = default, c3 = default, c4 = default;
                         cmplx cc0 = cc[(i) + ido * ((0) + cdim * (k))],
                             cc1 = cc[(i) + ido * ((1) + cdim * (k))],
                             cc2 = cc[(i) + ido * ((2) + cdim * (k))],
                             cc3 = cc[(i) + ido * ((3) + cdim * (k))];
-                        t6.r = cc0.r + cc2.r;
-                        t6.i = cc0.i + cc2.i;
-                        t5.r = cc0.r - cc2.r;
-                        t5.i = cc0.i - cc2.i;
-                        t7.r = cc1.r + cc3.r;
-                        t7.i = cc1.i + cc3.i;
-                        t8.r = cc1.r - cc3.r;
-                        t8.i = cc1.i - cc3.i;
-                        Intrinsics.ROTM90(ref t8);
-
+                        Intrinsics.PMC(ref t2, ref t1, ref cc0, ref cc2);
+                        Intrinsics.PMC(ref t3, ref t4, ref cc1, ref cc3);
+                        Intrinsics.ROTM90(ref t4);
                         cmplx wa0 = wa[(i) - 1 + (0) * (ido - 1)],
-                        wa1 = wa[(i) - 1 + (1) * (ido - 1)],
-                        wa2 = wa[(i) - 1 + (2) * (ido - 1)];
-                        ch[(i) + ido * ((k) + l1 * (0))].r = t6.r + t7.r;
-                        ch[(i) + ido * ((k) + l1 * (0))].i = t6.i + t7.i;
-                        c3.r = t6.r - t7.r;
-                        c3.i = t6.i - t7.i;
-                        c2.r = t5.r + t8.r;
-                        c2.i = t5.i + t8.i;
-                        c4.r = t5.r - t8.r;
-                        c4.i = t5.i - t8.i;
-                        ch[(i) + ido * ((k) + l1 * (1))].r = wa0.r * c2.r + wa0.i * c2.i;
-                        ch[(i) + ido * ((k) + l1 * (1))].i = wa0.r * c2.i - wa0.i * c2.r;
-                        ch[(i) + ido * ((k) + l1 * (2))].r = wa1.r * c3.r + wa1.i * c3.i;
-                        ch[(i) + ido * ((k) + l1 * (2))].i = wa1.r * c3.i - wa1.i * c3.r;
-                        ch[(i) + ido * ((k) + l1 * (3))].r = wa2.r * c4.r + wa2.i * c4.i;
-                        ch[(i) + ido * ((k) + l1 * (3))].i = wa2.r * c4.i - wa2.i * c4.r;
+                            wa1 = wa[(i) - 1 + (1) * (ido - 1)],
+                            wa2 = wa[(i) - 1 + (2) * (ido - 1)];
+                        Intrinsics.PMC(ref ch[(i) + ido * ((k) + l1 * (0))], ref c3, ref t2, ref t3);
+                        Intrinsics.PMC(ref c2, ref c4, ref t1, ref t4);
+                        Intrinsics.A_EQ_CB_MUL_C(ref ch[(i) + ido * ((k) + l1 * (1))], ref wa0, ref c2);
+                        Intrinsics.A_EQ_CB_MUL_C(ref ch[(i) + ido * ((k) + l1 * (2))], ref wa1, ref c3);
+                        Intrinsics.A_EQ_CB_MUL_C(ref ch[(i) + ido * ((k) + l1 * (3))], ref wa2, ref c4);
                     }
                 }
             }
@@ -1349,7 +1303,7 @@ namespace PocketFFT
             int idl1 = ido * l1;
 
             if (Constants.NAIL_TEST) NailTest.PrintComplexArray(cc.Slice(0, cdim * l1));
-            Span<cmplx> wal = new cmplx[ip];
+            cmplx[] wal = ArrayPool<cmplx>.Shared.Rent(ip);
             wal[0] = new cmplx(1.0, 0.0);
 
             for (int i = 1; i < ip; ++i)
@@ -1435,7 +1389,8 @@ namespace PocketFFT
                     }
                 }
             }
-            //DEALLOC(wal);
+
+            ArrayPool<cmplx>.Shared.Return(wal);
 
             // shuffling and twiddling
             if (ido == 1)

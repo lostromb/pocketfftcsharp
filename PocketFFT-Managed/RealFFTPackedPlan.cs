@@ -1,5 +1,8 @@
 ﻿using System;
+using System.Buffers;
 using System.Collections.Generic;
+using System.Numerics;
+using System.Runtime.InteropServices;
 using System.Text;
 
 namespace PocketFFT
@@ -70,7 +73,7 @@ namespace PocketFFT
             }
 
             int tws = rfftp_twsize();
-            this.mem = new double[tws];
+            this.mem = ArrayPool<double>.Shared.Rent(tws);
             rfftp_comp_twiddle();
         }
 
@@ -84,7 +87,13 @@ namespace PocketFFT
             rfftp_backward(this, c, fct);
         }
 
-        public void Dispose() { }
+        public void Dispose()
+        {
+            if (this.mem != null)
+            {
+                ArrayPool<double>.Shared.Return(this.mem);
+            }
+        }
 
         private static void rfftp_forward(RealFFTPackedPlan plan, Span<double> c, double fct)
         {
@@ -95,8 +104,17 @@ namespace PocketFFT
 
             int n = plan.length;
             int l1 = n, nf = plan.nfct;
-            double[] ch = new double[n];
-            Span<double> p1 = c, p2 = ch;
+            double[] scratch = null;
+            bool doStackAlloc = n <= Constants.STACKALLOC_DOUBLE_LIMIT;
+            if (!doStackAlloc)
+            {
+                scratch = ArrayPool<double>.Shared.Rent(n);
+            }
+
+            Span<double> ch = doStackAlloc ? stackalloc double[n] : scratch;
+            Span<double> p1 = c;
+            Span<double> p2 = ch;
+            bool swapped = false;
 
             for (int k1 = 0; k1 < nf; ++k1)
             {
@@ -104,41 +122,64 @@ namespace PocketFFT
                 int ip = plan.fct[k].fct;
                 int ido = n / l1;
                 l1 /= ip;
-
-                if (ip == 4)
+                if (swapped) // we can't swap a stackalloc span so we have to do this weird thing instead
                 {
-                    radf4(ido, l1, p1, p2, plan.mem.AsSpan(plan.fct[k].tw));
-                }
-                else if (ip == 2)
-                {
-                    radf2(ido, l1, p1, p2, plan.mem.AsSpan(plan.fct[k].tw));
-                }
-                else if (ip == 3)
-                {
-                    radf3(ido, l1, p1, p2, plan.mem.AsSpan(plan.fct[k].tw));
-                }
-                else if (ip == 5)
-                {
-                    radf5(ido, l1, p1, p2, plan.mem.AsSpan(plan.fct[k].tw));
+                    if (ip == 4)
+                    {
+                        radf4(ido, l1, p2, p1, plan.mem.AsSpan(plan.fct[k].tw));
+                    }
+                    else if (ip == 2)
+                    {
+                        radf2(ido, l1, p2, p1, plan.mem.AsSpan(plan.fct[k].tw));
+                    }
+                    else if (ip == 3)
+                    {
+                        radf3(ido, l1, p2, p1, plan.mem.AsSpan(plan.fct[k].tw));
+                    }
+                    else if (ip == 5)
+                    {
+                        radf5(ido, l1, p2, p1, plan.mem.AsSpan(plan.fct[k].tw));
+                    }
+                    else
+                    {
+                        radfg(ido, ip, l1, p2, p1, plan.mem.AsSpan(plan.fct[k].tw), plan.mem.AsSpan(plan.fct[k].tws));
+                        swapped = !swapped;
+                    }
                 }
                 else
                 {
-                    radfg(ido, ip, l1, p1, p2, plan.mem.AsSpan(plan.fct[k].tw), plan.mem.AsSpan(plan.fct[k].tws));
+                    if (ip == 4)
                     {
-                        Span<double> tmp = p1;
-                        p1 = p2;
-                        p2 = tmp;
+                        radf4(ido, l1, p1, p2, plan.mem.AsSpan(plan.fct[k].tw));
+                    }
+                    else if (ip == 2)
+                    {
+                        radf2(ido, l1, p1, p2, plan.mem.AsSpan(plan.fct[k].tw));
+                    }
+                    else if (ip == 3)
+                    {
+                        radf3(ido, l1, p1, p2, plan.mem.AsSpan(plan.fct[k].tw));
+                    }
+                    else if (ip == 5)
+                    {
+                        radf5(ido, l1, p1, p2, plan.mem.AsSpan(plan.fct[k].tw));
+                    }
+                    else
+                    {
+                        radfg(ido, ip, l1, p1, p2, plan.mem.AsSpan(plan.fct[k].tw), plan.mem.AsSpan(plan.fct[k].tws));
+                        swapped = !swapped;
                     }
                 }
 
-                {
-                    Span<double> tmp = p1;
-                    p1 = p2;
-                    p2 = tmp;
-                }
+                swapped = !swapped;
             }
 
-            copy_and_norm(c, p1, n, fct);
+            copy_and_norm(c, swapped ? p2 : p1, n, fct);
+
+            if (scratch != null)
+            {
+                ArrayPool<double>.Shared.Return(scratch);
+            }
         }
 
         private static void rfftp_backward(RealFFTPackedPlan plan, Span<double> c, double fct)
@@ -150,49 +191,85 @@ namespace PocketFFT
 
             int n = plan.length;
             int l1 = 1, nf = plan.nfct;
-            double[] ch = new double[n];
-            Span<double> p1 = c, p2 = ch;
+            double[] scratch = null;
+            bool doStackAlloc = n <= Constants.STACKALLOC_DOUBLE_LIMIT;
+            if (!doStackAlloc)
+            {
+                scratch = ArrayPool<double>.Shared.Rent(n);
+            }
+
+            Span<double> ch = doStackAlloc ? stackalloc double[n] : scratch;
+            Span<double> p1 = c;
+            Span<double> p2 = ch;
+            bool swapped = false;
 
             for (int k = 0; k < nf; k++)
             {
                 int ip = plan.fct[k].fct,
                     ido = n / (ip * l1);
 
-                if (ip == 4)
+                if (swapped) // we can't swap a stackalloc span so we have to do this weird thing instead
                 {
-                    radb4(ido, l1, p1, p2, plan.mem.AsSpan(plan.fct[k].tw));
-                }
-                else if (ip == 2)
-                {
-                    radb2(ido, l1, p1, p2, plan.mem.AsSpan(plan.fct[k].tw));
-                }
-                else if (ip == 3)
-                {
-                    radb3(ido, l1, p1, p2, plan.mem.AsSpan(plan.fct[k].tw));
-                }
-                else if (ip == 5)
-                {
-                    radb5(ido, l1, p1, p2, plan.mem.AsSpan(plan.fct[k].tw));
+                    if (ip == 4)
+                    {
+                        radb4(ido, l1, p2, p1, plan.mem.AsSpan(plan.fct[k].tw));
+                    }
+                    else if (ip == 2)
+                    {
+                        radb2(ido, l1, p2, p1, plan.mem.AsSpan(plan.fct[k].tw));
+                    }
+                    else if (ip == 3)
+                    {
+                        radb3(ido, l1, p2, p1, plan.mem.AsSpan(plan.fct[k].tw));
+                    }
+                    else if (ip == 5)
+                    {
+                        radb5(ido, l1, p2, p1, plan.mem.AsSpan(plan.fct[k].tw));
+                    }
+                    else
+                    {
+                        radbg(ido, ip, l1, p2, p1, plan.mem.AsSpan(plan.fct[k].tw), plan.mem.AsSpan(plan.fct[k].tws));
+                    }
                 }
                 else
                 {
-                    radbg(ido, ip, l1, p1, p2, plan.mem.AsSpan(plan.fct[k].tw), plan.mem.AsSpan(plan.fct[k].tws));
+                    if (ip == 4)
+                    {
+                        radb4(ido, l1, p1, p2, plan.mem.AsSpan(plan.fct[k].tw));
+                    }
+                    else if (ip == 2)
+                    {
+                        radb2(ido, l1, p1, p2, plan.mem.AsSpan(plan.fct[k].tw));
+                    }
+                    else if (ip == 3)
+                    {
+                        radb3(ido, l1, p1, p2, plan.mem.AsSpan(plan.fct[k].tw));
+                    }
+                    else if (ip == 5)
+                    {
+                        radb5(ido, l1, p1, p2, plan.mem.AsSpan(plan.fct[k].tw));
+                    }
+                    else
+                    {
+                        radbg(ido, ip, l1, p1, p2, plan.mem.AsSpan(plan.fct[k].tw), plan.mem.AsSpan(plan.fct[k].tws));
+                    }
                 }
 
-                {
-                    Span<double> tmp = p1;
-                    p1 = p2;
-                    p2 = tmp;
-                }
+                swapped = !swapped;
                 l1 *= ip;
             }
 
-            copy_and_norm(c, p1, n, fct);
+            copy_and_norm(c, swapped ? p2 : p1, n, fct);
+
+            if (scratch != null)
+            {
+                ArrayPool<double>.Shared.Return(scratch);
+            }
         }
 
         private static void copy_and_norm(Span<double> c, Span<double> p1, int n, double fct)
         {
-            if (p1 != c) // FIXME span reference comparison?
+            if (!Intrinsics.SpanRefEquals(p1, c))
             {
                 if (fct != 1.0)
                 {
@@ -211,10 +288,30 @@ namespace PocketFFT
             {
                 if (fct != 1.0)
                 {
+#if OPTIMIZE && NET8_0_OR_GREATER
+                    int idx = 0;
+                    int endIdx = n;
+                    if (Vector.IsHardwareAccelerated)
+                    {
+                        int vectorEndIdx = endIdx - (n % Vector<double>.Count);
+                        while (idx < vectorEndIdx)
+                        {
+                            Span<double> slice = c.Slice(idx, Vector<double>.Count);
+                            Vector.Multiply(new Vector<double>(slice), fct).CopyTo(slice);
+                            idx += Vector<double>.Count;
+                        }
+                    }
+
+                    while (idx < endIdx)
+                    {
+                        c[idx++] *= fct;
+                    }
+#else
                     for (int i = 0; i < n; ++i)
                     {
                         c[i] *= fct;
                     }
+#endif
                 }
             }
         }

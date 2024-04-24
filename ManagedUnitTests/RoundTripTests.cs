@@ -5,7 +5,7 @@ namespace ManagedUnitTests
     [TestClass]
     public class RoundTripTests
     {
-        private const int MAX_LENGTH = 2048;
+        private const int MAX_LENGTH = 4096;
         private const double epsilon = 2e-15;
 
         [TestMethod]

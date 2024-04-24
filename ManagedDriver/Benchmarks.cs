@@ -1,4 +1,5 @@
 ﻿using BenchmarkDotNet.Attributes;
+using PocketFFT;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -10,202 +11,50 @@ using static Driver.Benchmarks;
 
 namespace Driver
 {
-    [DisassemblyDiagnoser]
+    [MemoryDiagnoser]
     public class Benchmarks
     {
-        private Complex[]? cc;
-        private Complex[]? ch;
-        private Complex[]? wa;
+        private IRealFFTPlan _real;
+        private IComplexFFTPlan _complex;
+
+        private double[] _realInput;
+        private cmplx[] _complexInput;
+
+        [Params(64, 191, 1000, 2310, 5980)]
+        public int TransformLength { get; set; }
 
         [GlobalSetup]
         public void Setup()
         {
-            cc = new Complex[65536];
-            ch = new Complex[65536];
-            wa = new Complex[65536];
-            Span<Complex> span = cc;
-            foreach (ref Complex vec in span)
+            _realInput = new double[TransformLength * 2];
+            _real = FFTPlanFactory.Create1DRealFFTPlan(TransformLength);
+            _complexInput = new cmplx[TransformLength];
+            _complex = FFTPlanFactory.Create1DComplexFFTPlan(TransformLength);
+
+            for (int c = 0; c < _realInput.Length; c++)
             {
-                vec.r = (float)Random.Shared.NextDouble();
-                vec.i = (float)Random.Shared.NextDouble();
+                _realInput[c] = Random.Shared.NextDouble() - 0.5;
             }
 
-            span = ch;
-            foreach (ref Complex vec in span)
+            for (int c = 0; c < _complexInput.Length; c++)
             {
-                vec.r = (float)Random.Shared.NextDouble();
-                vec.i = (float)Random.Shared.NextDouble();
-            }
-
-            span = wa;
-            foreach (ref Complex vec in span)
-            {
-                vec.r = (float)Random.Shared.NextDouble();
-                vec.i = (float)Random.Shared.NextDouble();
+                _complexInput[c].r = Random.Shared.NextDouble() - 0.5;
+                _complexInput[c].i = Random.Shared.NextDouble() - 0.5;
             }
         }
 
         [Benchmark]
-        public void Pass2Inline()
+        public void Real()
         {
-            pass2b(2, 1024, cc.AsSpan(), ch.AsSpan(), wa.AsSpan());
+            _real.Forward(_realInput.AsSpan(), 3.0);
+            _real.Backward(_realInput.AsSpan(), 3.0);
         }
 
         [Benchmark]
-        public void Pass2RefFunc()
+        public void Complex()
         {
-            pass2b_reffunc(2, 1024, cc.AsSpan(), ch.AsSpan(), wa.AsSpan());
-        }
-
-        [Benchmark]
-        public void Pass2Assign()
-        {
-            pass2b_assign(2, 1024, cc.AsSpan(), ch.AsSpan(), wa.AsSpan());
-        }
-
-        internal struct Complex
-        {
-            internal double r;
-            internal double i;
-
-            public Complex(double r, double i)
-            {
-                this.r = r;
-                this.i = i;
-            }
-        }
-
-        private static void PMC(ref Complex a, ref Complex b, ref Complex c, ref Complex d)
-        {
-            a.r = c.r + d.r;
-            a.i = c.i + d.i;
-            b.r = c.r - d.r;
-            b.i = c.i - d.i;
-        }
-
-        private static void A_EQ_B_MUL_C(ref Complex a, ref Complex b, ref Complex c)
-        {
-            a.r = b.r * c.r - b.i * c.i;
-            a.i = b.r * c.i + b.i * c.r;
-        }
-        private static void pass2b_reffunc(int ido, int l1, Span<Complex> cc, Span<Complex> ch, Span<Complex> wa)
-        {
-            const int cdim = 2;
-
-            if (ido == 1)
-            {
-                for (int k = 0; k < l1; ++k)
-                {
-                    PMC(ref ch[(0) + ido * ((k) + l1 * (0))],
-                        ref ch[(0) + ido * ((k) + l1 * (1))],
-                        ref cc[(0) + ido * ((0) + cdim * (k))],
-                        ref cc[(0) + ido * ((1) + cdim * (k))]);
-                }
-            }
-            else
-            {
-                for (int k = 0; k < l1; ++k)
-                {
-                    PMC(ref ch[(0) + ido * ((k) + l1 * (0))],
-                        ref ch[(0) + ido * ((k) + l1 * (1))],
-                        ref cc[(0) + ido * ((0) + cdim * (k))],
-                        ref cc[(0) + ido * ((1) + cdim * (k))]);
-
-                    for (int i = 1; i < ido; ++i)
-                    {
-                        Complex t = default;
-                        PMC(ref ch[(i) + ido * ((k) + l1 * (0))],
-                            ref t,
-                            ref cc[(i) + ido * ((0) + cdim * (k))],
-                            ref cc[(i) + ido * ((1) + cdim * (k))]);
-                        A_EQ_B_MUL_C(
-                            ref ch[(i) + ido * ((k) + l1 * (1))],
-                            ref wa[(i) - 1 + (0) * (ido - 1)],
-                            ref t);
-                    }
-                }
-            }
-        }
-
-        private static void pass2b_assign(int ido, int l1, Span<Complex> cc, Span<Complex> ch, Span<Complex> wa)
-        {
-            const int cdim = 2;
-
-            if (ido == 1)
-            {
-                for (int k = 0; k < l1; ++k)
-                {
-                    ch[(0) + ido * ((k) + l1 * (0))] = new Complex(
-                        cc[(0) + ido * ((0) + cdim * (k))].r + cc[(0) + ido * ((1) + cdim * (k))].r,
-                        cc[(0) + ido * ((0) + cdim * (k))].i + cc[(0) + ido * ((1) + cdim * (k))].i);
-                    ch[(0) + ido * ((k) + l1 * (1))] = new Complex(
-                        cc[(0) + ido * ((0) + cdim * (k))].r - cc[(0) + ido * ((1) + cdim * (k))].r,
-                        ch[(0) + ido * ((k) + l1 * (1))].i = cc[(0) + ido * ((0) + cdim * (k))].i - cc[(0) + ido * ((1) + cdim * (k))].i);
-                }
-            }
-            else
-            {
-                for (int k = 0; k < l1; ++k)
-                {
-                    ch[(0) + ido * ((k) + l1 * (0))] = new Complex(
-                        cc[(0) + ido * ((0) + cdim * (k))].r + cc[(0) + ido * ((1) + cdim * (k))].r,
-                        cc[(0) + ido * ((0) + cdim * (k))].i + cc[(0) + ido * ((1) + cdim * (k))].i);
-                    ch[(0) + ido * ((k) + l1 * (1))] = new Complex(
-                        cc[(0) + ido * ((0) + cdim * (k))].r - cc[(0) + ido * ((1) + cdim * (k))].r,
-                        cc[(0) + ido * ((0) + cdim * (k))].i - cc[(0) + ido * ((1) + cdim * (k))].i);
-
-                    for (int i = 1; i < ido; ++i)
-                    {
-                        Complex t;
-                        ch[(i) + ido * ((k) + l1 * (0))] = new Complex(
-                            cc[(i) + ido * ((0) + cdim * (k))].r + cc[(i) + ido * ((1) + cdim * (k))].r,
-                            cc[(i) + ido * ((0) + cdim * (k))].i + cc[(i) + ido * ((1) + cdim * (k))].i);
-                        t = new Complex(
-                            cc[(i) + ido * ((0) + cdim * (k))].r - cc[(i) + ido * ((1) + cdim * (k))].r,
-                            cc[(i) + ido * ((0) + cdim * (k))].i - cc[(i) + ido * ((1) + cdim * (k))].i);
-                        ch[(i) + ido * ((k) + l1 * (1))] = new Complex(
-                            wa[(i) - 1 + (0) * (ido - 1)].r * t.r - wa[(i) - 1 + (0) * (ido - 1)].i * t.i,
-                            wa[(i) - 1 + (0) * (ido - 1)].r * t.i + wa[(i) - 1 + (0) * (ido - 1)].i * t.r);
-                    }
-                }
-            }
-        }
-
-        private static void pass2b(int ido, int l1, Span<Complex> cc, Span<Complex> ch, Span<Complex> wa)
-        {
-            const int cdim = 2;
-
-            if (ido == 1)
-            {
-                for (int k = 0; k < l1; ++k)
-                {
-                    ch[(0) + ido * ((k) + l1 * (0))].r = cc[(0) + ido * ((0) + cdim * (k))].r + cc[(0) + ido * ((1) + cdim * (k))].r;
-                    ch[(0) + ido * ((k) + l1 * (0))].i = cc[(0) + ido * ((0) + cdim * (k))].i + cc[(0) + ido * ((1) + cdim * (k))].i;
-                    ch[(0) + ido * ((k) + l1 * (1))].r = cc[(0) + ido * ((0) + cdim * (k))].r - cc[(0) + ido * ((1) + cdim * (k))].r;
-                    ch[(0) + ido * ((k) + l1 * (1))].i = cc[(0) + ido * ((0) + cdim * (k))].i - cc[(0) + ido * ((1) + cdim * (k))].i;
-                }
-            }
-            else
-            {
-                for (int k = 0; k < l1; ++k)
-                {
-                    ch[(0) + ido * ((k) + l1 * (0))].r = cc[(0) + ido * ((0) + cdim * (k))].r + cc[(0) + ido * ((1) + cdim * (k))].r;
-                    ch[(0) + ido * ((k) + l1 * (0))].i = cc[(0) + ido * ((0) + cdim * (k))].i + cc[(0) + ido * ((1) + cdim * (k))].i;
-                    ch[(0) + ido * ((k) + l1 * (1))].r = cc[(0) + ido * ((0) + cdim * (k))].r - cc[(0) + ido * ((1) + cdim * (k))].r;
-                    ch[(0) + ido * ((k) + l1 * (1))].i = cc[(0) + ido * ((0) + cdim * (k))].i - cc[(0) + ido * ((1) + cdim * (k))].i;
-
-                    for (int i = 1; i < ido; ++i)
-                    {
-                        Complex t;
-                        ch[(i) + ido * ((k) + l1 * (0))].r = cc[(i) + ido * ((0) + cdim * (k))].r + cc[(i) + ido * ((1) + cdim * (k))].r;
-                        ch[(i) + ido * ((k) + l1 * (0))].i = cc[(i) + ido * ((0) + cdim * (k))].i + cc[(i) + ido * ((1) + cdim * (k))].i;
-                        t.r = cc[(i) + ido * ((0) + cdim * (k))].r - cc[(i) + ido * ((1) + cdim * (k))].r;
-                        t.i = cc[(i) + ido * ((0) + cdim * (k))].i - cc[(i) + ido * ((1) + cdim * (k))].i;
-                        ch[(i) + ido * ((k) + l1 * (1))].r = wa[(i) - 1 + (0) * (ido - 1)].r * t.r - wa[(i) - 1 + (0) * (ido - 1)].i * t.i;
-                        ch[(i) + ido * ((k) + l1 * (1))].i = wa[(i) - 1 + (0) * (ido - 1)].r * t.i + wa[(i) - 1 + (0) * (ido - 1)].i * t.r;
-                    }
-                }
-            }
+            _complex.Forward(_complexInput.AsSpan(), 3.0);
+            _complex.Backward(_complexInput.AsSpan(), 3.0);
         }
     }
 }

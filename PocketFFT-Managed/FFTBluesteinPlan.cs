@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Buffers;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -20,12 +21,12 @@ namespace PocketFFT
         {
             this.n = length;
             this.n2 = Intrinsics.good_size(this.n * 2 - 1);
-            this.mem = new cmplx[this.n + this.n2];
+            this.mem = ArrayPool<cmplx>.Shared.Rent(this.n + this.n2);
             this.bk = 0;
             this.bkf = this.bk + this.n;
 
             /* initialize b_k */
-            double[] tmp = new double[4 * this.n];
+            Span<double> tmp = new double[4 * this.n];
             Intrinsics.sincos_2pibyn(2 * this.n, tmp);
             Span<cmplx> bk = this.mem.AsSpan(this.bk);
             Span<cmplx> bkf = this.mem.AsSpan(this.bkf);
@@ -65,12 +66,18 @@ namespace PocketFFT
             this.plan.Forward(bkf, 1.0);
         }
 
-        public void Dispose() { }
+        public void Dispose()
+        {
+            if (this.mem != null)
+            {
+                ArrayPool<cmplx>.Shared.Return(this.mem);
+            }
+        }
 
         public void Forward(Span<double> c, double fct)
         {
             int n = this.n;
-            cmplx[] tmp = new cmplx[n];
+            cmplx[] tmp = ArrayPool<cmplx>.Shared.Rent(n);
             for (int m = 0; m < n; ++m)
             {
                 tmp[m].r = c[m];
@@ -81,17 +88,17 @@ namespace PocketFFT
 
             c[0] = tmp[0].r;
 
-            // Safe method
-            //for (int i = 1; i < n; i++)
-            //{
-            //    c[2 * i - 1] = tmp[i].r;
-            //    c[2 * i] = tmp[i].i;
-            //}
-
-            // Jank method
+#if OPTIMIZE
             MemoryMarshal.Cast<cmplx, double>(tmp.AsSpan(1, n - 1)).CopyTo(c.Slice(1));
+#else
+            for (int i = 1; i < n; i++)
+            {
+                c[2 * i - 1] = tmp[i].r;
+                c[2 * i] = tmp[i].i;
+            }
+#endif
 
-            //DEALLOC(tmp);
+            ArrayPool<cmplx>.Shared.Return(tmp);
         }
 
         public void Forward(Span<cmplx> c, double fct)
@@ -102,19 +109,19 @@ namespace PocketFFT
         public void Backward(Span<double> c, double fct)
         {
             int n = this.n;
-            cmplx[] tmp = new cmplx[n];
+            cmplx[] tmp = ArrayPool<cmplx>.Shared.Rent(n);
             tmp[0].r = c[0];
             tmp[1].i = 0.0;
 
-            // Safe method
-            //for (int i = 1; i < n; i++)
-            //{
-            //    tmp[i].r = c[2 * i - 1];
-            //    tmp[i].i = c[2 * i];
-            //}
-
-            // Jank method
+#if OPTIMIZE
             c.Slice(1, (n - 1)).CopyTo(MemoryMarshal.Cast<cmplx, double>(tmp.AsSpan(1)));
+#else
+            for (int i = 1; i < n; i++)
+            {
+                tmp[i].r = c[2 * i - 1];
+                tmp[i].i = c[2 * i];
+            }
+#endif
 
             if ((n & 1) == 0)
             {
@@ -133,7 +140,7 @@ namespace PocketFFT
                 c[m] = tmp[m].r;
             }
 
-            //DEALLOC(tmp);
+            ArrayPool<cmplx>.Shared.Return(tmp);
         }
 
         public void Backward(Span<cmplx> c, double fct)
@@ -147,7 +154,7 @@ namespace PocketFFT
             int n2 = this.n2;
             Span<cmplx> bk = this.mem.AsSpan(this.bk);
             Span<cmplx> bkf = this.mem.AsSpan(this.bkf);
-            Span<cmplx> akf = new cmplx[n2];
+            cmplx[] akf = ArrayPool<cmplx>.Shared.Rent(n2);
 
             /* initialize a_k and FFT it */
             if (isign > 0)
@@ -216,7 +223,7 @@ namespace PocketFFT
                 }
             }
 
-            //DEALLOC(akf);
+            ArrayPool<cmplx>.Shared.Return(akf);
         }
     }
 }

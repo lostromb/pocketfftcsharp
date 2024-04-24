@@ -1,11 +1,35 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using System.Text;
 
 namespace PocketFFT
 {
     internal static class Intrinsics
     {
+        /// <summary>
+        /// Returns true if the spans refer to the same base address
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="a"></param>
+        /// <param name="b"></param>
+        /// <returns></returns>
+        internal static bool SpanRefEquals<T>(Span<T> a, Span<T> b)
+        {
+            if (a.Length == 0)
+            {
+                return b.Length == 0;
+            }
+            else if (b.Length == 0)
+            {
+                return a.Length == 0;
+            }
+            
+            return Unsafe.AreSame(ref Unsafe.AsRef(a[0]), ref Unsafe.AsRef(b[0]));
+            
+            //return a.Slice(0, 1).Overlaps(b.Slice(0, 1));
+        }
+        
         //#define SWAP(a,b,type)
         //    do { type tmp_=(a); (a)=(b); (b)=tmp_; } while(0)
         internal static void Swap<T>(ref T a, ref T b)

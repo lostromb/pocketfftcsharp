@@ -4,9 +4,7 @@ using System.Text;
 
 namespace PocketFFT
 {
-    
-
-    public class RealFFTPackedPlan : IRealFFTPlan
+    internal class RealFFTPackedPlan : IRealFFTPlan
     {
         internal struct rfftp_fctdata
         {

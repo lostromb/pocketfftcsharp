@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Numerics;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
@@ -289,36 +290,57 @@ namespace PocketFFT
                 l1 = l2;
             }
 
-            if (p1 != c) // FIXME span address comparison?
+            if (!Intrinsics.SpanRefEquals(p1,c))
             {
                 if (fct != 1.0)
+                {
                     for (int i = 0; i < len; ++i)
                     {
                         c[i].r = ch[i].r * fct;
                         c[i].i = ch[i].i * fct;
                     }
+                }
                 else
                 {
                     p1.Slice(0, len).CopyTo(c);
-                    //memcpy(c, p1, len * sizeof(cmplx));
                 }
             }
             else
             {
                 if (fct != 1.0)
                 {
+#if OPTIMIZE && NET8_0_OR_GREATER
+                    Span<double> cmplxComponents = MemoryMarshal.Cast<cmplx, double>(c);
+                    int idx = 0;
+                    int endIdx = len * 2;
+                    if (Vector.IsHardwareAccelerated)
+                    {
+                        int vectorEndIdx = endIdx - (endIdx % Vector<double>.Count);
+                        while (idx < vectorEndIdx)
+                        {
+                            Span<double> slice = cmplxComponents.Slice(idx, Vector<double>.Count);
+                            Vector.Multiply(new Vector<double>(slice), fct).CopyTo(slice);
+                            idx += Vector<double>.Count;
+                        }
+                    }
+
+                    while (idx < endIdx)
+                    {
+                        cmplxComponents[idx++] *= fct;
+                    }
+#else
                     for (int i = 0; i < len; ++i)
                     {
                         c[i].r *= fct;
                         c[i].i *= fct;
                     }
+#endif
                 }
             }
-
-            //DEALLOC(ch);
         }
 
-        private static void pass2b_opt(int ido, int l1, Span<cmplx> cc, Span<cmplx> ch, Span<cmplx> wa)
+#if OPTIMIZE
+        private static void pass2b(int ido, int l1, Span<cmplx> cc, Span<cmplx> ch, Span<cmplx> wa)
         {
             const int cdim = 2;
 
@@ -326,7 +348,8 @@ namespace PocketFFT
             {
                 for (int k = 0; k < l1; ++k)
                 {
-                    Intrinsics.PMC(ref ch[(0) + ido * ((k) + l1 * (0))],
+                    Intrinsics.PMC(
+                        ref ch[(0) + ido * ((k) + l1 * (0))],
                         ref ch[(0) + ido * ((k) + l1 * (1))],
                         ref cc[(0) + ido * ((0) + cdim * (k))],
                         ref cc[(0) + ido * ((1) + cdim * (k))]);
@@ -336,7 +359,8 @@ namespace PocketFFT
             {
                 for (int k = 0; k < l1; ++k)
                 {
-                    Intrinsics.PMC(ref ch[(0) + ido * ((k) + l1 * (0))],
+                    Intrinsics.PMC(
+                        ref ch[(0) + ido * ((k) + l1 * (0))],
                         ref ch[(0) + ido * ((k) + l1 * (1))],
                         ref cc[(0) + ido * ((0) + cdim * (k))],
                         ref cc[(0) + ido * ((1) + cdim * (k))]);
@@ -344,7 +368,8 @@ namespace PocketFFT
                     for (int i = 1; i < ido; ++i)
                     {
                         cmplx t = default;
-                        Intrinsics.PMC(ref ch[(i) + ido * ((k) + l1 * (0))],
+                        Intrinsics.PMC(
+                            ref ch[(i) + ido * ((k) + l1 * (0))],
                             ref t,
                             ref cc[(i) + ido * ((0) + cdim * (k))],
                             ref cc[(i) + ido * ((1) + cdim * (k))]);
@@ -356,7 +381,7 @@ namespace PocketFFT
                 }
             }
         }
-
+#else
         private static void pass2b(int ido, int l1, Span<cmplx> cc, Span<cmplx> ch, Span<cmplx> wa)
         {
             const int cdim = 2;
@@ -393,6 +418,7 @@ namespace PocketFFT
                 }
             }
         }
+#endif
 
         private static void pass2f(int ido, int l1, Span<cmplx> cc, Span<cmplx> ch, Span<cmplx> wa)
         {

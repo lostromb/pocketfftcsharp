@@ -1602,7 +1602,9 @@ namespace PocketFFT
                     cmplx tmp = ch[(i) + ido * ((k) + l1 * (0))];
                     for (int j = 1; j < ipph; ++j)
                     {
-                        Intrinsics.ADDTOC(ref tmp, ref ch[(i) + ido * ((k) + l1 * (j))]);
+                        ref cmplx z = ref ch[(i) + ido * ((k) + l1 * (j))];
+                        tmp.r += z.r;
+                        tmp.i += z.i;
                     }
 
                     cc[(i) + ido * ((k) + l1 * (0))] = tmp;
@@ -1682,6 +1684,7 @@ namespace PocketFFT
             }
 
             ArrayPool<cmplx>.Shared.Return(wal);
+            cmplx t1, t2;
 
             // shuffling and twiddling
             if (ido == 1)
@@ -1690,7 +1693,8 @@ namespace PocketFFT
                 {
                     for (int ik = 0; ik < idl1; ++ik)
                     {
-                        cmplx t1 = cc[(ik) + idl1 * (j)], t2 = cc[(ik) + idl1 * (jc)];
+                        t1 = cc[(ik) + idl1 * (j)];
+                        t2 = cc[(ik) + idl1 * (jc)];
                         Intrinsics.PMC(
                             ref cc[(ik) + idl1 * (j)],
                             ref cc[(ik) + idl1 * (jc)],
@@ -1705,7 +1709,8 @@ namespace PocketFFT
                 {
                     for (int k = 0; k < l1; ++k)
                     {
-                        cmplx t1 = cc[(0) + ido * ((k) + l1 * (j))], t2 = cc[(0) + ido * ((k) + l1 * (jc))];
+                        t1 = cc[(0) + ido * ((k) + l1 * (j))];
+                        t2 = cc[(0) + ido * ((k) + l1 * (jc))];
                         Intrinsics.PMC(
                             ref cc[(0) + ido * ((k) + l1 * (j))],
                             ref cc[(0) + ido * ((k) + l1 * (jc))],

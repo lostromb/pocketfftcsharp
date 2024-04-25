@@ -346,17 +346,25 @@ namespace PocketFFT
             b.i = c.i - d.i;
         }
 
+        // #define PM(a,b,c,d) { a=c+d; b=c-d; }
+        internal static void PM(ref double a, ref double b, double c, double d)
+        {
+            a = c + d;
+            b = c - d;
+        }
+
+        // #define PM(a,b,c,d) { a=c+d; b=c-d; }
+        internal static void MULPM(ref double a, ref double b, double c, double d, double e, double f)
+        {
+            a = c * e + d * f;
+            b = c * f - d * e;
+        }
+
         //#define ADDC(a,b,c) { a.r=b.r+c.r; a.i=b.i+c.i; }
         internal static void ADDC(ref cmplx a, ref cmplx b, ref cmplx c)
         {
             a.r = b.r + c.r;
             a.i = b.i + c.i;
-        }
-
-        internal static void ADDTOC(ref cmplx a, ref cmplx b)
-        {
-            a.r += b.r;
-            a.i += b.i;
         }
 
         internal static void PASSG1(ref cmplx a, ref cmplx b, ref cmplx c, ref cmplx d, ref cmplx e, ref cmplx f)

@@ -49,3 +49,16 @@ Optimize 4f, 4b
 | Real    | 5980            | 177,868.4 ns | 1,340.01 ns | 1,187.89 ns |         - |
 | Complex | 5980            | 377,639.0 ns | 2,602.82 ns | 2,307.33 ns |         - |
 
+Optimize pass5 and passg
+| Method  | TransformLength | Mean         | Error       | StdDev      | Allocated |
+|-------- |---------------- |-------------:|------------:|------------:|----------:|
+| Real    | 64              |     479.1 ns |     2.43 ns |     2.15 ns |         - |
+| Complex | 64              |     695.6 ns |     2.97 ns |     2.63 ns |         - |
+| Real    | 191             |  14,217.4 ns |    46.17 ns |    36.05 ns |         - |
+| Complex | 191             |  13,735.8 ns |    39.23 ns |    32.76 ns |         - |
+| Real    | 1000            |  10,568.2 ns |   186.60 ns |   222.14 ns |         - |
+| Complex | 1000            |  17,271.9 ns |    58.81 ns |    52.13 ns |         - |
+| Real    | 2310            |  56,147.0 ns |   286.78 ns |   268.25 ns |         - |
+| Complex | 2310            |  61,939.7 ns |   228.03 ns |   202.14 ns |         - |
+| Real    | 5980            | 179,074.0 ns | 1,403.53 ns | 1,312.86 ns |         - |
+| Complex | 5980            | 284,480.7 ns |   876.74 ns |   820.10 ns |         - |

@@ -88,15 +88,15 @@ namespace PocketFFT
 
             c[0] = tmp[0].r;
 
-#if OPTIMIZE
+            // Jank method
             MemoryMarshal.Cast<cmplx, double>(tmp.AsSpan(1, n - 1)).CopyTo(c.Slice(1));
-#else
-            for (int i = 1; i < n; i++)
-            {
-                c[2 * i - 1] = tmp[i].r;
-                c[2 * i] = tmp[i].i;
-            }
-#endif
+            
+            // Safe method
+            //for (int i = 1; i < n; i++)
+            //{
+            //    c[2 * i - 1] = tmp[i].r;
+            //    c[2 * i] = tmp[i].i;
+            //}
 
             ArrayPool<cmplx>.Shared.Return(tmp);
         }
@@ -112,16 +112,16 @@ namespace PocketFFT
             cmplx[] tmp = ArrayPool<cmplx>.Shared.Rent(n);
             tmp[0].r = c[0];
             tmp[1].i = 0.0;
-
-#if OPTIMIZE
+            
+            // Jank method
             c.Slice(1, (n - 1)).CopyTo(MemoryMarshal.Cast<cmplx, double>(tmp.AsSpan(1)));
-#else
-            for (int i = 1; i < n; i++)
-            {
-                tmp[i].r = c[2 * i - 1];
-                tmp[i].i = c[2 * i];
-            }
-#endif
+
+            // Safe method
+            //for (int i = 1; i < n; i++)
+            //{
+            //    tmp[i].r = c[2 * i - 1];
+            //    tmp[i].i = c[2 * i];
+            //}
 
             if ((n & 1) == 0)
             {

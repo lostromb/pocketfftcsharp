@@ -318,7 +318,7 @@ namespace PocketFFT
             {
                 if (fct != 1.0)
                 {
-#if OPTIMIZE && NET8_0_OR_GREATER
+#if NET8_0_OR_GREATER
                     Span<double> cmplxComponents = MemoryMarshal.Cast<cmplx, double>(c);
                     int idx = 0;
                     int endIdx = len * 2;
@@ -746,102 +746,139 @@ namespace PocketFFT
             }
         }
 
-        static void pass5b(int ido, int l1, Span<cmplx> cc, Span<cmplx> ch, Span<cmplx> wa)
+        private static void pass5b(int ido, int l1, Span<cmplx> cc, Span<cmplx> ch, Span<cmplx> wa)
         {
-
             const int cdim = 5;
             const double tw1r = 0.3090169943749474241,
                 tw1i = 0.95105651629515357212,
                 tw2r = -0.8090169943749474241,
                 tw2i = 0.58778525229247312917;
-            if (Constants.NAIL_TEST) NailTest.PrintComplexArray(cc.Slice(0, cdim * l1));
 
             if (ido == 1)
+            {
                 for (int k = 0; k < l1; ++k)
                 {
-                    cmplx t0 = cc[(0) + ido * ((0) + cdim * (k))], t1, t2, t3, t4;
-                    {
-                        t1.r = cc[(0) + ido * ((1) + cdim * (k))].r + cc[(0) + ido * ((4) + cdim * (k))].r; t1.i = cc[(0) + ido * ((1) + cdim * (k))].i + cc[(0) + ido * ((4) + cdim * (k))].i; t4.r = cc[(0) + ido * ((1) + cdim * (k))].r - cc[(0) + ido * ((4) + cdim * (k))].r; t4.i = cc[(0) + ido * ((1) + cdim * (k))].i - cc[(0) + ido * ((4) + cdim * (k))].i;
-                    }
-                    {
-                        t2.r = cc[(0) + ido * ((2) + cdim * (k))].r + cc[(0) + ido * ((3) + cdim * (k))].r; t2.i = cc[(0) + ido * ((2) + cdim * (k))].i + cc[(0) + ido * ((3) + cdim * (k))].i; t3.r = cc[(0) + ido * ((2) + cdim * (k))].r - cc[(0) + ido * ((3) + cdim * (k))].r; t3.i = cc[(0) + ido * ((2) + cdim * (k))].i - cc[(0) + ido * ((3) + cdim * (k))].i;
-                    }
-                    ch[(0) + ido * ((k) + l1 * (0))].r = t0.r + t1.r + t2.r; ch[(0) + ido * ((k) + l1 * (0))].i = t0.i + t1.i + t2.i;
-                    {
-                        cmplx ca, cb; ca.r = t0.r + tw1r * t1.r + tw2r * t2.r; ca.i = t0.i + tw1r * t1.i + tw2r * t2.i; cb.i = +tw1i * t4.r + tw2i * t3.r; cb.r = -(+tw1i * t4.i + tw2i * t3.i);
-                        {
-                            ch[(0) + ido * ((k) + l1 * (1))].r = ca.r + cb.r; ch[(0) + ido * ((k) + l1 * (1))].i = ca.i + cb.i; ch[(0) + ido * ((k) + l1 * (4))].r = ca.r - cb.r; ch[(0) + ido * ((k) + l1 * (4))].i = ca.i - cb.i;
-                        }
-                    }
-                    {
-                        cmplx ca, cb; ca.r = t0.r + tw2r * t1.r + tw1r * t2.r; ca.i = t0.i + tw2r * t1.i + tw1r * t2.i; cb.i = +tw2i * t4.r - tw1i * t3.r; cb.r = -(+tw2i * t4.i - tw1i * t3.i);
-                        {
-                            ch[(0) + ido * ((k) + l1 * (2))].r = ca.r + cb.r; ch[(0) + ido * ((k) + l1 * (2))].i = ca.i + cb.i; ch[(0) + ido * ((k) + l1 * (3))].r = ca.r - cb.r; ch[(0) + ido * ((k) + l1 * (3))].i = ca.i - cb.i;
-                        }
-                    }
-                }
+                    cmplx t0 = cc[(0) + ido * ((0) + cdim * (k))], t1 = default, t2 = default, t3 = default, t4 = default;
+                    cmplx ca = default, cb = default;
+                    Intrinsics.PMC(
+                        ref t1,
+                        ref t4,
+                        ref cc[(0) + ido * ((1) + cdim * (k))],
+                        ref cc[(0) + ido * ((4) + cdim * (k))]);
+                    Intrinsics.PMC(
+                        ref t2,
+                        ref t3,
+                        ref cc[(0) + ido * ((2) + cdim * (k))],
+                        ref cc[(0) + ido * ((3) + cdim * (k))]);
+                    Intrinsics.ADDC(ref ch[(0) + ido * ((k) + l1 * (0))], ref t0, ref t1, ref t2);
 
+                    ca.r = t0.r + tw1r * t1.r + tw2r * t2.r;
+                    ca.i = t0.i + tw1r * t1.i + tw2r * t2.i;
+                    cb.i = +tw1i * t4.r + tw2i * t3.r;
+                    cb.r = -(+tw1i * t4.i + tw2i * t3.i);
+
+                    Intrinsics.PMC(
+                        ref ch[(0) + ido * ((k) + l1 * (1))],
+                        ref ch[(0) + ido * ((k) + l1 * (4))],
+                        ref ca,
+                        ref cb);
+
+                    ca.r = t0.r + tw2r * t1.r + tw1r * t2.r;
+                    ca.i = t0.i + tw2r * t1.i + tw1r * t2.i;
+                    cb.i = +tw2i * t4.r - tw1i * t3.r;
+                    cb.r = -(+tw2i * t4.i - tw1i * t3.i);
+
+                    Intrinsics.PMC(
+                        ref ch[(0) + ido * ((k) + l1 * (2))],
+                        ref ch[(0) + ido * ((k) + l1 * (3))],
+                        ref ca,
+                        ref cb);
+                }
+            }
             else
+            {
                 for (int k = 0; k < l1; ++k)
                 {
-                    {
-                        cmplx t0 = cc[(0) + ido * ((0) + cdim * (k))], t1, t2, t3, t4;
-                        {
-                            t1.r = cc[(0) + ido * ((1) + cdim * (k))].r + cc[(0) + ido * ((4) + cdim * (k))].r; t1.i = cc[(0) + ido * ((1) + cdim * (k))].i + cc[(0) + ido * ((4) + cdim * (k))].i; t4.r = cc[(0) + ido * ((1) + cdim * (k))].r - cc[(0) + ido * ((4) + cdim * (k))].r; t4.i = cc[(0) + ido * ((1) + cdim * (k))].i - cc[(0) + ido * ((4) + cdim * (k))].i;
-                        }
-                        {
-                            t2.r = cc[(0) + ido * ((2) + cdim * (k))].r + cc[(0) + ido * ((3) + cdim * (k))].r; t2.i = cc[(0) + ido * ((2) + cdim * (k))].i + cc[(0) + ido * ((3) + cdim * (k))].i; t3.r = cc[(0) + ido * ((2) + cdim * (k))].r - cc[(0) + ido * ((3) + cdim * (k))].r; t3.i = cc[(0) + ido * ((2) + cdim * (k))].i - cc[(0) + ido * ((3) + cdim * (k))].i;
-                        }
-                        ch[(0) + ido * ((k) + l1 * (0))].r = t0.r + t1.r + t2.r; ch[(0) + ido * ((k) + l1 * (0))].i = t0.i + t1.i + t2.i;
-                        {
-                            cmplx ca, cb; ca.r = t0.r + tw1r * t1.r + tw2r * t2.r; ca.i = t0.i + tw1r * t1.i + tw2r * t2.i; cb.i = +tw1i * t4.r + tw2i * t3.r; cb.r = -(+tw1i * t4.i + tw2i * t3.i);
-                            {
-                                ch[(0) + ido * ((k) + l1 * (1))].r = ca.r + cb.r; ch[(0) + ido * ((k) + l1 * (1))].i = ca.i + cb.i; ch[(0) + ido * ((k) + l1 * (4))].r = ca.r - cb.r; ch[(0) + ido * ((k) + l1 * (4))].i = ca.i - cb.i;
-                            }
-                        }
-                        {
-                            cmplx ca, cb; ca.r = t0.r + tw2r * t1.r + tw1r * t2.r; ca.i = t0.i + tw2r * t1.i + tw1r * t2.i; cb.i = +tw2i * t4.r - tw1i * t3.r; cb.r = -(+tw2i * t4.i - tw1i * t3.i);
-                            {
-                                ch[(0) + ido * ((k) + l1 * (2))].r = ca.r + cb.r; ch[(0) + ido * ((k) + l1 * (2))].i = ca.i + cb.i; ch[(0) + ido * ((k) + l1 * (3))].r = ca.r - cb.r; ch[(0) + ido * ((k) + l1 * (3))].i = ca.i - cb.i;
-                            }
-                        }
-                    }
+                    cmplx t0 = cc[(0) + ido * ((0) + cdim * (k))], t1 = default, t2 = default, t3 = default, t4 = default;
+                    cmplx ca = default, cb = default;
+                    Intrinsics.PMC(
+                        ref t1,
+                        ref t4,
+                        ref cc[(0) + ido * ((1) + cdim * (k))],
+                        ref cc[(0) + ido * ((4) + cdim * (k))]);
+                    Intrinsics.PMC(
+                        ref t2,
+                        ref t3,
+                        ref cc[(0) + ido * ((2) + cdim * (k))],
+                        ref cc[(0) + ido * ((3) + cdim * (k))]);
+                    Intrinsics.ADDC(ref ch[(0) + ido * ((k) + l1 * (0))], ref t0, ref t1, ref t2);
+
+                    ca.r = t0.r + tw1r * t1.r + tw2r * t2.r;
+                    ca.i = t0.i + tw1r * t1.i + tw2r * t2.i;
+                    cb.i = tw1i * t4.r + tw2i * t3.r;
+                    cb.r = -(tw1i * t4.i + tw2i * t3.i);
+
+                    Intrinsics.PMC(
+                        ref ch[(0) + ido * ((k) + l1 * (1))],
+                        ref ch[(0) + ido * ((k) + l1 * (4))],
+                        ref ca,
+                        ref cb);
+
+                    ca.r = t0.r + tw2r * t1.r + tw1r * t2.r;
+                    ca.i = t0.i + tw2r * t1.i + tw1r * t2.i;
+                    cb.i = tw2i * t4.r - tw1i * t3.r;
+                    cb.r = -(tw2i * t4.i - tw1i * t3.i);
+
+                    Intrinsics.PMC(
+                        ref ch[(0) + ido * ((k) + l1 * (2))],
+                        ref ch[(0) + ido * ((k) + l1 * (3))],
+                        ref ca,
+                        ref cb);
+
                     for (int i = 1; i < ido; ++i)
                     {
-                        cmplx t0 = cc[(i) + ido * ((0) + cdim * (k))], t1, t2, t3, t4;
-                        {
-                            t1.r = cc[(i) + ido * ((1) + cdim * (k))].r + cc[(i) + ido * ((4) + cdim * (k))].r; t1.i = cc[(i) + ido * ((1) + cdim * (k))].i + cc[(i) + ido * ((4) + cdim * (k))].i; t4.r = cc[(i) + ido * ((1) + cdim * (k))].r - cc[(i) + ido * ((4) + cdim * (k))].r; t4.i = cc[(i) + ido * ((1) + cdim * (k))].i - cc[(i) + ido * ((4) + cdim * (k))].i;
-                        }
-                        {
-                            t2.r = cc[(i) + ido * ((2) + cdim * (k))].r + cc[(i) + ido * ((3) + cdim * (k))].r; t2.i = cc[(i) + ido * ((2) + cdim * (k))].i + cc[(i) + ido * ((3) + cdim * (k))].i; t3.r = cc[(i) + ido * ((2) + cdim * (k))].r - cc[(i) + ido * ((3) + cdim * (k))].r; t3.i = cc[(i) + ido * ((2) + cdim * (k))].i - cc[(i) + ido * ((3) + cdim * (k))].i;
-                        }
-                        ch[(i) + ido * ((k) + l1 * (0))].r = t0.r + t1.r + t2.r; ch[(i) + ido * ((k) + l1 * (0))].i = t0.i + t1.i + t2.i;
-                        {
-                            cmplx ca, cb, da, db; ca.r = t0.r + tw1r * t1.r + tw2r * t2.r; ca.i = t0.i + tw1r * t1.i + tw2r * t2.i; cb.i = +tw1i * t4.r + tw2i * t3.r; cb.r = -(+tw1i * t4.i + tw2i * t3.i);
-                            {
-                                da.r = ca.r + cb.r; da.i = ca.i + cb.i; db.r = ca.r - cb.r; db.i = ca.i - cb.i;
-                            }
-                            {
-                                ch[(i) + ido * ((k) + l1 * (1))].r = wa[(i) - 1 + (1 - 1) * (ido - 1)].r * da.r - wa[(i) - 1 + (1 - 1) * (ido - 1)].i * da.i; ch[(i) + ido * ((k) + l1 * (1))].i = wa[(i) - 1 + (1 - 1) * (ido - 1)].r * da.i + wa[(i) - 1 + (1 - 1) * (ido - 1)].i * da.r;
-                            }
-                            {
-                                ch[(i) + ido * ((k) + l1 * (4))].r = wa[(i) - 1 + (4 - 1) * (ido - 1)].r * db.r - wa[(i) - 1 + (4 - 1) * (ido - 1)].i * db.i; ch[(i) + ido * ((k) + l1 * (4))].i = wa[(i) - 1 + (4 - 1) * (ido - 1)].r * db.i + wa[(i) - 1 + (4 - 1) * (ido - 1)].i * db.r;
-                            }
-                        }
-                        {
-                            cmplx ca, cb, da, db; ca.r = t0.r + tw2r * t1.r + tw1r * t2.r; ca.i = t0.i + tw2r * t1.i + tw1r * t2.i; cb.i = +tw2i * t4.r - tw1i * t3.r; cb.r = -(+tw2i * t4.i - tw1i * t3.i);
-                            {
-                                da.r = ca.r + cb.r; da.i = ca.i + cb.i; db.r = ca.r - cb.r; db.i = ca.i - cb.i;
-                            }
-                            {
-                                ch[(i) + ido * ((k) + l1 * (2))].r = wa[(i) - 1 + (2 - 1) * (ido - 1)].r * da.r - wa[(i) - 1 + (2 - 1) * (ido - 1)].i * da.i; ch[(i) + ido * ((k) + l1 * (2))].i = wa[(i) - 1 + (2 - 1) * (ido - 1)].r * da.i + wa[(i) - 1 + (2 - 1) * (ido - 1)].i * da.r;
-                            }
-                            {
-                                ch[(i) + ido * ((k) + l1 * (3))].r = wa[(i) - 1 + (3 - 1) * (ido - 1)].r * db.r - wa[(i) - 1 + (3 - 1) * (ido - 1)].i * db.i; ch[(i) + ido * ((k) + l1 * (3))].i = wa[(i) - 1 + (3 - 1) * (ido - 1)].r * db.i + wa[(i) - 1 + (3 - 1) * (ido - 1)].i * db.r;
-                            }
-                        }
+                        cmplx da = default, db = default;
+                        t0 = cc[(i) + ido * ((0) + cdim * (k))];
+                        Intrinsics.PMC(
+                            ref t1,
+                            ref t4,
+                            ref cc[(i) + ido * ((1) + cdim * (k))],
+                            ref cc[(i) + ido * ((4) + cdim * (k))]);
+                        Intrinsics.PMC(
+                            ref t2,
+                            ref t3,
+                            ref cc[(i) + ido * ((2) + cdim * (k))],
+                            ref cc[(i) + ido * ((3) + cdim * (k))]);
+                        Intrinsics.ADDC(ref ch[(i) + ido * ((k) + l1 * (0))], ref t0, ref t1, ref t2);
+                        ca.r = t0.r + tw1r * t1.r + tw2r * t2.r;
+                        ca.i = t0.i + tw1r * t1.i + tw2r * t2.i;
+                        cb.i = tw1i * t4.r + tw2i * t3.r;
+                        cb.r = -(tw1i * t4.i + tw2i * t3.i);
+                        Intrinsics.PMC(ref da, ref db, ref ca, ref cb);
+                        Intrinsics.A_EQ_B_MUL_C(
+                            ref ch[(i) + ido * ((k) + l1 * (1))],
+                            ref wa[(i) - 1 + (1 - 1) * (ido - 1)],
+                            ref da);
+                        Intrinsics.A_EQ_B_MUL_C(
+                            ref ch[(i) + ido * ((k) + l1 * (4))],
+                            ref wa[(i) - 1 + (4 - 1) * (ido - 1)],
+                            ref db);
+                        ca.r = t0.r + tw2r * t1.r + tw1r * t2.r;
+                        ca.i = t0.i + tw2r * t1.i + tw1r * t2.i;
+                        cb.i = tw2i * t4.r - tw1i * t3.r;
+                        cb.r = -(tw2i * t4.i - tw1i * t3.i);
+                        Intrinsics.PMC(ref da, ref db, ref ca, ref cb);
+                        Intrinsics.A_EQ_B_MUL_C(
+                            ref ch[(i) + ido * ((k) + l1 * (2))],
+                            ref wa[(i) - 1 + (2 - 1) * (ido - 1)],
+                            ref da);
+                        Intrinsics.A_EQ_B_MUL_C(
+                            ref ch[(i) + ido * ((k) + l1 * (3))],
+                            ref wa[(i) - 1 + (3 - 1) * (ido - 1)],
+                            ref db);
                     }
                 }
+            }
         }
 
         static void pass5f(int ido, int l1, Span<cmplx> cc, Span<cmplx> ch, Span<cmplx> wa)
@@ -852,95 +889,136 @@ namespace PocketFFT
                 tw2r = -0.8090169943749474241,
                 tw2i = -0.58778525229247312917;
 
-            if (Constants.NAIL_TEST) NailTest.PrintComplexArray(cc.Slice(0, cdim * l1));
             if (ido == 1)
+            {
                 for (int k = 0; k < l1; ++k)
                 {
-                    cmplx t0 = cc[(0) + ido * ((0) + cdim * (k))], t1, t2, t3, t4;
-                    {
-                        t1.r = cc[(0) + ido * ((1) + cdim * (k))].r + cc[(0) + ido * ((4) + cdim * (k))].r; t1.i = cc[(0) + ido * ((1) + cdim * (k))].i + cc[(0) + ido * ((4) + cdim * (k))].i; t4.r = cc[(0) + ido * ((1) + cdim * (k))].r - cc[(0) + ido * ((4) + cdim * (k))].r; t4.i = cc[(0) + ido * ((1) + cdim * (k))].i - cc[(0) + ido * ((4) + cdim * (k))].i;
-                    }
-                    {
-                        t2.r = cc[(0) + ido * ((2) + cdim * (k))].r + cc[(0) + ido * ((3) + cdim * (k))].r; t2.i = cc[(0) + ido * ((2) + cdim * (k))].i + cc[(0) + ido * ((3) + cdim * (k))].i; t3.r = cc[(0) + ido * ((2) + cdim * (k))].r - cc[(0) + ido * ((3) + cdim * (k))].r; t3.i = cc[(0) + ido * ((2) + cdim * (k))].i - cc[(0) + ido * ((3) + cdim * (k))].i;
-                    }
-                    ch[(0) + ido * ((k) + l1 * (0))].r = t0.r + t1.r + t2.r; ch[(0) + ido * ((k) + l1 * (0))].i = t0.i + t1.i + t2.i;
-                    {
-                        cmplx ca, cb; ca.r = t0.r + tw1r * t1.r + tw2r * t2.r; ca.i = t0.i + tw1r * t1.i + tw2r * t2.i; cb.i = +tw1i * t4.r + tw2i * t3.r; cb.r = -(+tw1i * t4.i + tw2i * t3.i);
-                        {
-                            ch[(0) + ido * ((k) + l1 * (1))].r = ca.r + cb.r; ch[(0) + ido * ((k) + l1 * (1))].i = ca.i + cb.i; ch[(0) + ido * ((k) + l1 * (4))].r = ca.r - cb.r; ch[(0) + ido * ((k) + l1 * (4))].i = ca.i - cb.i;
-                        }
-                    }
-                    {
-                        cmplx ca, cb; ca.r = t0.r + tw2r * t1.r + tw1r * t2.r; ca.i = t0.i + tw2r * t1.i + tw1r * t2.i; cb.i = +tw2i * t4.r - tw1i * t3.r; cb.r = -(+tw2i * t4.i - tw1i * t3.i);
-                        {
-                            ch[(0) + ido * ((k) + l1 * (2))].r = ca.r + cb.r; ch[(0) + ido * ((k) + l1 * (2))].i = ca.i + cb.i; ch[(0) + ido * ((k) + l1 * (3))].r = ca.r - cb.r; ch[(0) + ido * ((k) + l1 * (3))].i = ca.i - cb.i;
-                        }
-                    }
+                    cmplx t0 = cc[(0) + ido * ((0) + cdim * (k))], t1 = default, t2 = default, t3 = default, t4 = default;
+                    cmplx ca = default, cb = default;
+                    Intrinsics.PMC(
+                        ref t1,
+                        ref t4,
+                        ref cc[(0) + ido * ((1) + cdim * (k))],
+                        ref cc[(0) + ido * ((4) + cdim * (k))]);
+                    Intrinsics.PMC(
+                        ref t2,
+                        ref t3,
+                        ref cc[(0) + ido * ((2) + cdim * (k))],
+                        ref cc[(0) + ido * ((3) + cdim * (k))]);
+                    Intrinsics.ADDC(ref ch[(0) + ido * ((k) + l1 * (0))], ref t0, ref t1, ref t2);
+
+                    ca.r = t0.r + tw1r * t1.r + tw2r * t2.r;
+                    ca.i = t0.i + tw1r * t1.i + tw2r * t2.i;
+                    cb.i = +tw1i * t4.r + tw2i * t3.r;
+                    cb.r = -(+tw1i * t4.i + tw2i * t3.i);
+
+                    Intrinsics.PMC(
+                        ref ch[(0) + ido * ((k) + l1 * (1))],
+                        ref ch[(0) + ido * ((k) + l1 * (4))],
+                        ref ca,
+                        ref cb);
+
+                    ca.r = t0.r + tw2r * t1.r + tw1r * t2.r;
+                    ca.i = t0.i + tw2r * t1.i + tw1r * t2.i;
+                    cb.i = +tw2i * t4.r - tw1i * t3.r;
+                    cb.r = -(+tw2i * t4.i - tw1i * t3.i);
+
+                    Intrinsics.PMC(
+                        ref ch[(0) + ido * ((k) + l1 * (2))],
+                        ref ch[(0) + ido * ((k) + l1 * (3))],
+                        ref ca,
+                        ref cb);
                 }
+            }
             else
+            {
                 for (int k = 0; k < l1; ++k)
                 {
-                    {
-                        cmplx t0 = cc[(0) + ido * ((0) + cdim * (k))], t1, t2, t3, t4;
-                        {
-                            t1.r = cc[(0) + ido * ((1) + cdim * (k))].r + cc[(0) + ido * ((4) + cdim * (k))].r; t1.i = cc[(0) + ido * ((1) + cdim * (k))].i + cc[(0) + ido * ((4) + cdim * (k))].i; t4.r = cc[(0) + ido * ((1) + cdim * (k))].r - cc[(0) + ido * ((4) + cdim * (k))].r; t4.i = cc[(0) + ido * ((1) + cdim * (k))].i - cc[(0) + ido * ((4) + cdim * (k))].i;
-                        }
-                        {
-                            t2.r = cc[(0) + ido * ((2) + cdim * (k))].r + cc[(0) + ido * ((3) + cdim * (k))].r; t2.i = cc[(0) + ido * ((2) + cdim * (k))].i + cc[(0) + ido * ((3) + cdim * (k))].i; t3.r = cc[(0) + ido * ((2) + cdim * (k))].r - cc[(0) + ido * ((3) + cdim * (k))].r; t3.i = cc[(0) + ido * ((2) + cdim * (k))].i - cc[(0) + ido * ((3) + cdim * (k))].i;
-                        }
-                        ch[(0) + ido * ((k) + l1 * (0))].r = t0.r + t1.r + t2.r; ch[(0) + ido * ((k) + l1 * (0))].i = t0.i + t1.i + t2.i;
-                        {
-                            cmplx ca, cb; ca.r = t0.r + tw1r * t1.r + tw2r * t2.r; ca.i = t0.i + tw1r * t1.i + tw2r * t2.i; cb.i = +tw1i * t4.r + tw2i * t3.r; cb.r = -(+tw1i * t4.i + tw2i * t3.i);
-                            {
-                                ch[(0) + ido * ((k) + l1 * (1))].r = ca.r + cb.r; ch[(0) + ido * ((k) + l1 * (1))].i = ca.i + cb.i; ch[(0) + ido * ((k) + l1 * (4))].r = ca.r - cb.r; ch[(0) + ido * ((k) + l1 * (4))].i = ca.i - cb.i;
-                            }
-                        }
-                        {
-                            cmplx ca, cb; ca.r = t0.r + tw2r * t1.r + tw1r * t2.r; ca.i = t0.i + tw2r * t1.i + tw1r * t2.i; cb.i = +tw2i * t4.r - tw1i * t3.r; cb.r = -(+tw2i * t4.i - tw1i * t3.i);
-                            {
-                                ch[(0) + ido * ((k) + l1 * (2))].r = ca.r + cb.r; ch[(0) + ido * ((k) + l1 * (2))].i = ca.i + cb.i; ch[(0) + ido * ((k) + l1 * (3))].r = ca.r - cb.r; ch[(0) + ido * ((k) + l1 * (3))].i = ca.i - cb.i;
-                            }
-                        }
-                    }
+                    cmplx t0 = cc[(0) + ido * ((0) + cdim * (k))], t1 = default, t2 = default, t3 = default, t4 = default;
+                    cmplx ca = default, cb = default;
+                    Intrinsics.PMC(
+                        ref t1,
+                        ref t4,
+                        ref cc[(0) + ido * ((1) + cdim * (k))],
+                        ref cc[(0) + ido * ((4) + cdim * (k))]);
+                    Intrinsics.PMC(
+                        ref t2,
+                        ref t3,
+                        ref cc[(0) + ido * ((2) + cdim * (k))],
+                        ref cc[(0) + ido * ((3) + cdim * (k))]);
+                    Intrinsics.ADDC(ref ch[(0) + ido * ((k) + l1 * (0))], ref t0, ref t1, ref t2);
+
+                    ca.r = t0.r + tw1r * t1.r + tw2r * t2.r;
+                    ca.i = t0.i + tw1r * t1.i + tw2r * t2.i;
+                    cb.i = tw1i * t4.r + tw2i * t3.r;
+                    cb.r = -(tw1i * t4.i + tw2i * t3.i);
+
+                    Intrinsics.PMC(
+                        ref ch[(0) + ido * ((k) + l1 * (1))],
+                        ref ch[(0) + ido * ((k) + l1 * (4))],
+                        ref ca,
+                        ref cb);
+
+                    ca.r = t0.r + tw2r * t1.r + tw1r * t2.r;
+                    ca.i = t0.i + tw2r * t1.i + tw1r * t2.i;
+                    cb.i = tw2i * t4.r - tw1i * t3.r;
+                    cb.r = -(tw2i * t4.i - tw1i * t3.i);
+
+                    Intrinsics.PMC(
+                        ref ch[(0) + ido * ((k) + l1 * (2))],
+                        ref ch[(0) + ido * ((k) + l1 * (3))],
+                        ref ca,
+                        ref cb);
+
                     for (int i = 1; i < ido; ++i)
                     {
-                        cmplx t0 = cc[(i) + ido * ((0) + cdim * (k))], t1, t2, t3, t4;
-                        {
-                            t1.r = cc[(i) + ido * ((1) + cdim * (k))].r + cc[(i) + ido * ((4) + cdim * (k))].r; t1.i = cc[(i) + ido * ((1) + cdim * (k))].i + cc[(i) + ido * ((4) + cdim * (k))].i; t4.r = cc[(i) + ido * ((1) + cdim * (k))].r - cc[(i) + ido * ((4) + cdim * (k))].r; t4.i = cc[(i) + ido * ((1) + cdim * (k))].i - cc[(i) + ido * ((4) + cdim * (k))].i;
-                        }
-                        {
-                            t2.r = cc[(i) + ido * ((2) + cdim * (k))].r + cc[(i) + ido * ((3) + cdim * (k))].r; t2.i = cc[(i) + ido * ((2) + cdim * (k))].i + cc[(i) + ido * ((3) + cdim * (k))].i; t3.r = cc[(i) + ido * ((2) + cdim * (k))].r - cc[(i) + ido * ((3) + cdim * (k))].r; t3.i = cc[(i) + ido * ((2) + cdim * (k))].i - cc[(i) + ido * ((3) + cdim * (k))].i;
-                        }
-                        ch[(i) + ido * ((k) + l1 * (0))].r = t0.r + t1.r + t2.r; ch[(i) + ido * ((k) + l1 * (0))].i = t0.i + t1.i + t2.i;
-                        {
-                            cmplx ca, cb, da, db; ca.r = t0.r + tw1r * t1.r + tw2r * t2.r; ca.i = t0.i + tw1r * t1.i + tw2r * t2.i; cb.i = +tw1i * t4.r + tw2i * t3.r; cb.r = -(+tw1i * t4.i + tw2i * t3.i);
-                            {
-                                da.r = ca.r + cb.r; da.i = ca.i + cb.i; db.r = ca.r - cb.r; db.i = ca.i - cb.i;
-                            }
-                            {
-                                ch[(i) + ido * ((k) + l1 * (1))].r = wa[(i) - 1 + (1 - 1) * (ido - 1)].r * da.r + wa[(i) - 1 + (1 - 1) * (ido - 1)].i * da.i; ch[(i) + ido * ((k) + l1 * (1))].i = wa[(i) - 1 + (1 - 1) * (ido - 1)].r * da.i - wa[(i) - 1 + (1 - 1) * (ido - 1)].i * da.r;
-                            }
-                            {
-                                ch[(i) + ido * ((k) + l1 * (4))].r = wa[(i) - 1 + (4 - 1) * (ido - 1)].r * db.r + wa[(i) - 1 + (4 - 1) * (ido - 1)].i * db.i; ch[(i) + ido * ((k) + l1 * (4))].i = wa[(i) - 1 + (4 - 1) * (ido - 1)].r * db.i - wa[(i) - 1 + (4 - 1) * (ido - 1)].i * db.r;
-                            }
-                        }
-                        {
-                            cmplx ca, cb, da, db; ca.r = t0.r + tw2r * t1.r + tw1r * t2.r; ca.i = t0.i + tw2r * t1.i + tw1r * t2.i; cb.i = +tw2i * t4.r - tw1i * t3.r; cb.r = -(+tw2i * t4.i - tw1i * t3.i);
-                            {
-                                da.r = ca.r + cb.r; da.i = ca.i + cb.i; db.r = ca.r - cb.r; db.i = ca.i - cb.i;
-                            }
-                            {
-                                ch[(i) + ido * ((k) + l1 * (2))].r = wa[(i) - 1 + (2 - 1) * (ido - 1)].r * da.r + wa[(i) - 1 + (2 - 1) * (ido - 1)].i * da.i; ch[(i) + ido * ((k) + l1 * (2))].i = wa[(i) - 1 + (2 - 1) * (ido - 1)].r * da.i - wa[(i) - 1 + (2 - 1) * (ido - 1)].i * da.r;
-                            }
-                            {
-                                ch[(i) + ido * ((k) + l1 * (3))].r = wa[(i) - 1 + (3 - 1) * (ido - 1)].r * db.r + wa[(i) - 1 + (3 - 1) * (ido - 1)].i * db.i; ch[(i) + ido * ((k) + l1 * (3))].i = wa[(i) - 1 + (3 - 1) * (ido - 1)].r * db.i - wa[(i) - 1 + (3 - 1) * (ido - 1)].i * db.r;
-                            }
-                        }
+                        cmplx da = default, db = default;
+                        t0 = cc[(i) + ido * ((0) + cdim * (k))];
+                        Intrinsics.PMC(
+                            ref t1,
+                            ref t4,
+                            ref cc[(i) + ido * ((1) + cdim * (k))],
+                            ref cc[(i) + ido * ((4) + cdim * (k))]);
+                        Intrinsics.PMC(
+                            ref t2,
+                            ref t3,
+                            ref cc[(i) + ido * ((2) + cdim * (k))],
+                            ref cc[(i) + ido * ((3) + cdim * (k))]);
+                        Intrinsics.ADDC(ref ch[(i) + ido * ((k) + l1 * (0))], ref t0, ref t1, ref t2);
+                        ca.r = t0.r + tw1r * t1.r + tw2r * t2.r;
+                        ca.i = t0.i + tw1r * t1.i + tw2r * t2.i;
+
+                        cb.i = tw1i * t4.r + tw2i * t3.r;
+                        cb.r = -(tw1i * t4.i + tw2i * t3.i);
+                        Intrinsics.PMC(ref da, ref db, ref ca, ref cb);
+                        Intrinsics.A_EQ_CB_MUL_C(
+                            ref ch[(i) + ido * ((k) + l1 * (1))],
+                            ref wa[(i) - 1 + (1 - 1) * (ido - 1)],
+                            ref da);
+                        Intrinsics.A_EQ_CB_MUL_C(
+                            ref ch[(i) + ido * ((k) + l1 * (4))],
+                            ref wa[(i) - 1 + (4 - 1) * (ido - 1)],
+                            ref db);
+                        ca.r = t0.r + tw2r * t1.r + tw1r * t2.r;
+                        ca.i = t0.i + tw2r * t1.i + tw1r * t2.i;
+
+                        cb.i = tw2i * t4.r - tw1i * t3.r;
+                        cb.r = -(tw2i * t4.i - tw1i * t3.i);
+                        Intrinsics.PMC(ref da, ref db, ref ca, ref cb);
+                        Intrinsics.A_EQ_CB_MUL_C(
+                            ref ch[(i) + ido * ((k) + l1 * (2))],
+                            ref wa[(i) - 1 + (2 - 1) * (ido - 1)],
+                            ref da);
+                        Intrinsics.A_EQ_CB_MUL_C(
+                            ref ch[(i) + ido * ((k) + l1 * (3))],
+                            ref wa[(i) - 1 + (3 - 1) * (ido - 1)],
+                            ref db);
                     }
                 }
+            }
         }
 
-        static void pass7(int ido, int l1, Span<cmplx> cc, Span<cmplx> ch, Span<cmplx> wa, int sign)
+        private static void pass7(int ido, int l1, Span<cmplx> cc, Span<cmplx> ch, Span<cmplx> wa, int sign)
         {
             const int cdim = 7;
             double tw1r = 0.623489801858733530525,
@@ -950,137 +1028,187 @@ namespace PocketFFT
                 tw3r = -0.9009688679024191262361,
                 tw3i = sign * 0.4338837391175581204758;
 
-            if (Constants.NAIL_TEST) NailTest.PrintComplexArray(cc.Slice(0, cdim * l1));
+            cmplx t1 = default, t2 = default, t3 = default, t4 = default, t5 = default, t6 = default, t7 = default;
+            cmplx ca = default, cb = default, da = default, db = default;
             if (ido == 1)
+            {
                 for (int k = 0; k < l1; ++k)
                 {
-                    cmplx t1 = cc[(0) + ido * ((0) + cdim * (k))], t2, t3, t4, t5, t6, t7;
-                    {
-                        t2.r = cc[(0) + ido * ((1) + cdim * (k))].r + cc[(0) + ido * ((6) + cdim * (k))].r; t2.i = cc[(0) + ido * ((1) + cdim * (k))].i + cc[(0) + ido * ((6) + cdim * (k))].i; t7.r = cc[(0) + ido * ((1) + cdim * (k))].r - cc[(0) + ido * ((6) + cdim * (k))].r; t7.i = cc[(0) + ido * ((1) + cdim * (k))].i - cc[(0) + ido * ((6) + cdim * (k))].i;
-                    }
-                    {
-                        t3.r = cc[(0) + ido * ((2) + cdim * (k))].r + cc[(0) + ido * ((5) + cdim * (k))].r; t3.i = cc[(0) + ido * ((2) + cdim * (k))].i + cc[(0) + ido * ((5) + cdim * (k))].i; t6.r = cc[(0) + ido * ((2) + cdim * (k))].r - cc[(0) + ido * ((5) + cdim * (k))].r; t6.i = cc[(0) + ido * ((2) + cdim * (k))].i - cc[(0) + ido * ((5) + cdim * (k))].i;
-                    }
-                    {
-                        t4.r = cc[(0) + ido * ((3) + cdim * (k))].r + cc[(0) + ido * ((4) + cdim * (k))].r; t4.i = cc[(0) + ido * ((3) + cdim * (k))].i + cc[(0) + ido * ((4) + cdim * (k))].i; t5.r = cc[(0) + ido * ((3) + cdim * (k))].r - cc[(0) + ido * ((4) + cdim * (k))].r; t5.i = cc[(0) + ido * ((3) + cdim * (k))].i - cc[(0) + ido * ((4) + cdim * (k))].i;
-                    }
-                    ch[(0) + ido * ((k) + l1 * (0))].r = t1.r + t2.r + t3.r + t4.r; ch[(0) + ido * ((k) + l1 * (0))].i = t1.i + t2.i + t3.i + t4.i;
-                    {
-                        cmplx ca, cb; ca.r = t1.r + tw1r * t2.r + tw2r * t3.r + tw3r * t4.r; ca.i = t1.i + tw1r * t2.i + tw2r * t3.i + tw3r * t4.i; cb.i = +tw1i * t7.r + tw2i * t6.r + tw3i * t5.r; cb.r = -(+tw1i * t7.i + tw2i * t6.i + tw3i * t5.i);
-                        {
-                            ch[(0) + ido * ((k) + l1 * (1))].r = ca.r + cb.r; ch[(0) + ido * ((k) + l1 * (1))].i = ca.i + cb.i; ch[(0) + ido * ((k) + l1 * (6))].r = ca.r - cb.r; ch[(0) + ido * ((k) + l1 * (6))].i = ca.i - cb.i;
-                        }
-                    }
-                    {
-                        cmplx ca, cb; ca.r = t1.r + tw2r * t2.r + tw3r * t3.r + tw1r * t4.r; ca.i = t1.i + tw2r * t2.i + tw3r * t3.i + tw1r * t4.i; cb.i = +tw2i * t7.r - tw3i * t6.r - tw1i * t5.r; cb.r = -(+tw2i * t7.i - tw3i * t6.i - tw1i * t5.i);
-                        {
-                            ch[(0) + ido * ((k) + l1 * (2))].r = ca.r + cb.r; ch[(0) + ido * ((k) + l1 * (2))].i = ca.i + cb.i; ch[(0) + ido * ((k) + l1 * (5))].r = ca.r - cb.r; ch[(0) + ido * ((k) + l1 * (5))].i = ca.i - cb.i;
-                        }
-                    }
-                    {
-                        cmplx ca, cb; ca.r = t1.r + tw3r * t2.r + tw1r * t3.r + tw2r * t4.r; ca.i = t1.i + tw3r * t2.i + tw1r * t3.i + tw2r * t4.i; cb.i = +tw3i * t7.r - tw1i * t6.r + tw2i * t5.r; cb.r = -(+tw3i * t7.i - tw1i * t6.i + tw2i * t5.i);
-                        {
-                            ch[(0) + ido * ((k) + l1 * (3))].r = ca.r + cb.r; ch[(0) + ido * ((k) + l1 * (3))].i = ca.i + cb.i; ch[(0) + ido * ((k) + l1 * (4))].r = ca.r - cb.r; ch[(0) + ido * ((k) + l1 * (4))].i = ca.i - cb.i;
-                        }
-                    }
+                    t1 = cc[(0) + ido * ((0) + cdim * (k))];
+                    Intrinsics.PMC(
+                        ref t2,
+                        ref t7,
+                        ref cc[(0) + ido * ((1) + cdim * (k))],
+                        ref cc[(0) + ido * ((6) + cdim * (k))]);
+                    Intrinsics.PMC(
+                        ref t3,
+                        ref t6,
+                        ref cc[(0) + ido * ((2) + cdim * (k))],
+                        ref cc[(0) + ido * ((5) + cdim * (k))]);
+                    Intrinsics.PMC(
+                        ref t4,
+                        ref t5,
+                        ref cc[(0) + ido * ((3) + cdim * (k))],
+                        ref cc[(0) + ido * ((4) + cdim * (k))]);
+                    Intrinsics.ADDC(ref ch[(0) + ido * ((k) + l1 * (0))], ref t1, ref t2, ref t3, ref t4);
+
+                    ca.r = t1.r + tw1r * t2.r + tw2r * t3.r + tw3r * t4.r;
+                    ca.i = t1.i + tw1r * t2.i + tw2r * t3.i + tw3r * t4.i;
+                    cb.i = +tw1i * t7.r + tw2i * t6.r + tw3i * t5.r;
+                    cb.r = -(+tw1i * t7.i + tw2i * t6.i + tw3i * t5.i);
+                    Intrinsics.PMC(
+                        ref ch[(0) + ido * ((k) + l1 * (1))],
+                        ref ch[(0) + ido * ((k) + l1 * (6))],
+                        ref ca,
+                        ref cb);
+                    ca.r = t1.r + tw2r * t2.r + tw3r * t3.r + tw1r * t4.r;
+                    ca.i = t1.i + tw2r * t2.i + tw3r * t3.i + tw1r * t4.i;
+                    cb.i = +tw2i * t7.r - tw3i * t6.r - tw1i * t5.r;
+                    cb.r = -(+tw2i * t7.i - tw3i * t6.i - tw1i * t5.i);
+                    Intrinsics.PMC(
+                        ref ch[(0) + ido * ((k) + l1 * (2))],
+                        ref ch[(0) + ido * ((k) + l1 * (5))],
+                        ref ca,
+                        ref cb);
+                    ca.r = t1.r + tw3r * t2.r + tw1r * t3.r + tw2r * t4.r;
+                    ca.i = t1.i + tw3r * t2.i + tw1r * t3.i + tw2r * t4.i;
+                    cb.i = +tw3i * t7.r - tw1i * t6.r + tw2i * t5.r;
+                    cb.r = -(+tw3i * t7.i - tw1i * t6.i + tw2i * t5.i);
+                    Intrinsics.PMC(
+                        ref ch[(0) + ido * ((k) + l1 * (3))],
+                        ref ch[(0) + ido * ((k) + l1 * (4))],
+                        ref ca,
+                        ref cb);
                 }
+            }
             else
+            {
                 for (int k = 0; k < l1; ++k)
                 {
-                    {
-                        cmplx t1 = cc[(0) + ido * ((0) + cdim * (k))], t2, t3, t4, t5, t6, t7;
-                        {
-                            t2.r = cc[(0) + ido * ((1) + cdim * (k))].r + cc[(0) + ido * ((6) + cdim * (k))].r; t2.i = cc[(0) + ido * ((1) + cdim * (k))].i + cc[(0) + ido * ((6) + cdim * (k))].i; t7.r = cc[(0) + ido * ((1) + cdim * (k))].r - cc[(0) + ido * ((6) + cdim * (k))].r; t7.i = cc[(0) + ido * ((1) + cdim * (k))].i - cc[(0) + ido * ((6) + cdim * (k))].i;
-                        }
-                        {
-                            t3.r = cc[(0) + ido * ((2) + cdim * (k))].r + cc[(0) + ido * ((5) + cdim * (k))].r; t3.i = cc[(0) + ido * ((2) + cdim * (k))].i + cc[(0) + ido * ((5) + cdim * (k))].i; t6.r = cc[(0) + ido * ((2) + cdim * (k))].r - cc[(0) + ido * ((5) + cdim * (k))].r; t6.i = cc[(0) + ido * ((2) + cdim * (k))].i - cc[(0) + ido * ((5) + cdim * (k))].i;
-                        }
-                        {
-                            t4.r = cc[(0) + ido * ((3) + cdim * (k))].r + cc[(0) + ido * ((4) + cdim * (k))].r; t4.i = cc[(0) + ido * ((3) + cdim * (k))].i + cc[(0) + ido * ((4) + cdim * (k))].i; t5.r = cc[(0) + ido * ((3) + cdim * (k))].r - cc[(0) + ido * ((4) + cdim * (k))].r; t5.i = cc[(0) + ido * ((3) + cdim * (k))].i - cc[(0) + ido * ((4) + cdim * (k))].i;
-                        }
-                        ch[(0) + ido * ((k) + l1 * (0))].r = t1.r + t2.r + t3.r + t4.r; ch[(0) + ido * ((k) + l1 * (0))].i = t1.i + t2.i + t3.i + t4.i;
-                        {
-                            cmplx ca, cb; ca.r = t1.r + tw1r * t2.r + tw2r * t3.r + tw3r * t4.r; ca.i = t1.i + tw1r * t2.i + tw2r * t3.i + tw3r * t4.i; cb.i = +tw1i * t7.r + tw2i * t6.r + tw3i * t5.r; cb.r = -(+tw1i * t7.i + tw2i * t6.i + tw3i * t5.i);
-                            {
-                                ch[(0) + ido * ((k) + l1 * (1))].r = ca.r + cb.r; ch[(0) + ido * ((k) + l1 * (1))].i = ca.i + cb.i; ch[(0) + ido * ((k) + l1 * (6))].r = ca.r - cb.r; ch[(0) + ido * ((k) + l1 * (6))].i = ca.i - cb.i;
-                            }
-                        }
-                        {
-                            cmplx ca, cb; ca.r = t1.r + tw2r * t2.r + tw3r * t3.r + tw1r * t4.r; ca.i = t1.i + tw2r * t2.i + tw3r * t3.i + tw1r * t4.i; cb.i = +tw2i * t7.r - tw3i * t6.r - tw1i * t5.r; cb.r = -(+tw2i * t7.i - tw3i * t6.i - tw1i * t5.i);
-                            {
-                                ch[(0) + ido * ((k) + l1 * (2))].r = ca.r + cb.r; ch[(0) + ido * ((k) + l1 * (2))].i = ca.i + cb.i; ch[(0) + ido * ((k) + l1 * (5))].r = ca.r - cb.r; ch[(0) + ido * ((k) + l1 * (5))].i = ca.i - cb.i;
-                            }
-                        }
-                        {
-                            cmplx ca, cb; ca.r = t1.r + tw3r * t2.r + tw1r * t3.r + tw2r * t4.r; ca.i = t1.i + tw3r * t2.i + tw1r * t3.i + tw2r * t4.i; cb.i = +tw3i * t7.r - tw1i * t6.r + tw2i * t5.r; cb.r = -(+tw3i * t7.i - tw1i * t6.i + tw2i * t5.i);
-                            {
-                                ch[(0) + ido * ((k) + l1 * (3))].r = ca.r + cb.r; ch[(0) + ido * ((k) + l1 * (3))].i = ca.i + cb.i; ch[(0) + ido * ((k) + l1 * (4))].r = ca.r - cb.r; ch[(0) + ido * ((k) + l1 * (4))].i = ca.i - cb.i;
-                            }
-                        }
-                    }
+                    t1 = cc[(0) + ido * ((0) + cdim * (k))];
+                    Intrinsics.PMC(
+                        ref t2,
+                        ref t7,
+                        ref cc[(0) + ido * ((1) + cdim * (k))],
+                        ref cc[(0) + ido * ((6) + cdim * (k))]);
+                    Intrinsics.PMC(
+                        ref t3,
+                        ref t6,
+                        ref cc[(0) + ido * ((2) + cdim * (k))],
+                        ref cc[(0) + ido * ((5) + cdim * (k))]);
+                    Intrinsics.PMC(
+                        ref t4,
+                        ref t5,
+                        ref cc[(0) + ido * ((3) + cdim * (k))],
+                        ref cc[(0) + ido * ((4) + cdim * (k))]);
+                    Intrinsics.ADDC(ref ch[(0) + ido * ((k) + l1 * (0))], ref t1, ref t2, ref t3, ref t4);
+                    ca.r = t1.r + tw1r * t2.r + tw2r * t3.r + tw3r * t4.r;
+                    ca.i = t1.i + tw1r * t2.i + tw2r * t3.i + tw3r * t4.i;
+                    cb.i = +tw1i * t7.r + tw2i * t6.r + tw3i * t5.r;
+                    cb.r = -(+tw1i * t7.i + tw2i * t6.i + tw3i * t5.i);
+                    Intrinsics.PMC(
+                        ref ch[(0) + ido * ((k) + l1 * (1))],
+                        ref ch[(0) + ido * ((k) + l1 * (6))],
+                        ref ca,
+                        ref cb);
+                    ca.r = t1.r + tw2r * t2.r + tw3r * t3.r + tw1r * t4.r;
+                    ca.i = t1.i + tw2r * t2.i + tw3r * t3.i + tw1r * t4.i;
+                    cb.i = +tw2i * t7.r - tw3i * t6.r - tw1i * t5.r;
+                    cb.r = -(+tw2i * t7.i - tw3i * t6.i - tw1i * t5.i);
+                    Intrinsics.PMC(
+                        ref ch[(0) + ido * ((k) + l1 * (2))],
+                        ref ch[(0) + ido * ((k) + l1 * (5))],
+                        ref ca,
+                        ref cb);
+                    ca.r = t1.r + tw3r * t2.r + tw1r * t3.r + tw2r * t4.r;
+                    ca.i = t1.i + tw3r * t2.i + tw1r * t3.i + tw2r * t4.i;
+                    cb.i = +tw3i * t7.r - tw1i * t6.r + tw2i * t5.r;
+                    cb.r = -(+tw3i * t7.i - tw1i * t6.i + tw2i * t5.i);
+                    Intrinsics.PMC(
+                        ref ch[(0) + ido * ((k) + l1 * (3))],
+                        ref ch[(0) + ido * ((k) + l1 * (4))],
+                        ref ca,
+                        ref cb);
+
                     for (int i = 1; i < ido; ++i)
                     {
-                        cmplx t1 = cc[(i) + ido * ((0) + cdim * (k))], t2, t3, t4, t5, t6, t7;
-                        {
-                            t2.r = cc[(i) + ido * ((1) + cdim * (k))].r + cc[(i) + ido * ((6) + cdim * (k))].r; t2.i = cc[(i) + ido * ((1) + cdim * (k))].i + cc[(i) + ido * ((6) + cdim * (k))].i; t7.r = cc[(i) + ido * ((1) + cdim * (k))].r - cc[(i) + ido * ((6) + cdim * (k))].r; t7.i = cc[(i) + ido * ((1) + cdim * (k))].i - cc[(i) + ido * ((6) + cdim * (k))].i;
-                        }
-                        {
-                            t3.r = cc[(i) + ido * ((2) + cdim * (k))].r + cc[(i) + ido * ((5) + cdim * (k))].r; t3.i = cc[(i) + ido * ((2) + cdim * (k))].i + cc[(i) + ido * ((5) + cdim * (k))].i; t6.r = cc[(i) + ido * ((2) + cdim * (k))].r - cc[(i) + ido * ((5) + cdim * (k))].r; t6.i = cc[(i) + ido * ((2) + cdim * (k))].i - cc[(i) + ido * ((5) + cdim * (k))].i;
-                        }
-                        {
-                            t4.r = cc[(i) + ido * ((3) + cdim * (k))].r + cc[(i) + ido * ((4) + cdim * (k))].r; t4.i = cc[(i) + ido * ((3) + cdim * (k))].i + cc[(i) + ido * ((4) + cdim * (k))].i; t5.r = cc[(i) + ido * ((3) + cdim * (k))].r - cc[(i) + ido * ((4) + cdim * (k))].r; t5.i = cc[(i) + ido * ((3) + cdim * (k))].i - cc[(i) + ido * ((4) + cdim * (k))].i;
-                        }
-                        ch[(i) + ido * ((k) + l1 * (0))].r = t1.r + t2.r + t3.r + t4.r; ch[(i) + ido * ((k) + l1 * (0))].i = t1.i + t2.i + t3.i + t4.i;
-                        {
-                            cmplx da, db;
-                            {
-                                cmplx ca, cb; ca.r = t1.r + tw1r * t2.r + tw2r * t3.r + tw3r * t4.r; ca.i = t1.i + tw1r * t2.i + tw2r * t3.i + tw3r * t4.i; cb.i = +tw1i * t7.r + tw2i * t6.r + tw3i * t5.r; cb.r = -(+tw1i * t7.i + tw2i * t6.i + tw3i * t5.i);
-                                {
-                                    da.r = ca.r + cb.r; da.i = ca.i + cb.i; db.r = ca.r - cb.r; db.i = ca.i - cb.i;
-                                }
-                            }
-                            {
-                                ch[(i) + ido * ((k) + l1 * (1))].r = wa[(i) - 1 + (1 - 1) * (ido - 1)].r * da.r - sign * wa[(i) - 1 + (1 - 1) * (ido - 1)].i * da.i; ch[(i) + ido * ((k) + l1 * (1))].i = wa[(i) - 1 + (1 - 1) * (ido - 1)].r * da.i + sign * wa[(i) - 1 + (1 - 1) * (ido - 1)].i * da.r;
-                            }
-                            {
-                                ch[(i) + ido * ((k) + l1 * (6))].r = wa[(i) - 1 + (6 - 1) * (ido - 1)].r * db.r - sign * wa[(i) - 1 + (6 - 1) * (ido - 1)].i * db.i; ch[(i) + ido * ((k) + l1 * (6))].i = wa[(i) - 1 + (6 - 1) * (ido - 1)].r * db.i + sign * wa[(i) - 1 + (6 - 1) * (ido - 1)].i * db.r;
-                            }
-                        }
-                        {
-                            cmplx da, db;
-                            {
-                                cmplx ca, cb; ca.r = t1.r + tw2r * t2.r + tw3r * t3.r + tw1r * t4.r; ca.i = t1.i + tw2r * t2.i + tw3r * t3.i + tw1r * t4.i; cb.i = +tw2i * t7.r - tw3i * t6.r - tw1i * t5.r; cb.r = -(+tw2i * t7.i - tw3i * t6.i - tw1i * t5.i);
-                                {
-                                    da.r = ca.r + cb.r; da.i = ca.i + cb.i; db.r = ca.r - cb.r; db.i = ca.i - cb.i;
-                                }
-                            }
-                            {
-                                ch[(i) + ido * ((k) + l1 * (2))].r = wa[(i) - 1 + (2 - 1) * (ido - 1)].r * da.r - sign * wa[(i) - 1 + (2 - 1) * (ido - 1)].i * da.i; ch[(i) + ido * ((k) + l1 * (2))].i = wa[(i) - 1 + (2 - 1) * (ido - 1)].r * da.i + sign * wa[(i) - 1 + (2 - 1) * (ido - 1)].i * da.r;
-                            }
-                            {
-                                ch[(i) + ido * ((k) + l1 * (5))].r = wa[(i) - 1 + (5 - 1) * (ido - 1)].r * db.r - sign * wa[(i) - 1 + (5 - 1) * (ido - 1)].i * db.i; ch[(i) + ido * ((k) + l1 * (5))].i = wa[(i) - 1 + (5 - 1) * (ido - 1)].r * db.i + sign * wa[(i) - 1 + (5 - 1) * (ido - 1)].i * db.r;
-                            }
-                        }
-                        {
-                            cmplx da, db;
-                            {
-                                cmplx ca, cb; ca.r = t1.r + tw3r * t2.r + tw1r * t3.r + tw2r * t4.r; ca.i = t1.i + tw3r * t2.i + tw1r * t3.i + tw2r * t4.i; cb.i = +tw3i * t7.r - tw1i * t6.r + tw2i * t5.r; cb.r = -(+tw3i * t7.i - tw1i * t6.i + tw2i * t5.i);
-                                {
-                                    da.r = ca.r + cb.r; da.i = ca.i + cb.i; db.r = ca.r - cb.r; db.i = ca.i - cb.i;
-                                }
-                            }
-                            {
-                                ch[(i) + ido * ((k) + l1 * (3))].r = wa[(i) - 1 + (3 - 1) * (ido - 1)].r * da.r - sign * wa[(i) - 1 + (3 - 1) * (ido - 1)].i * da.i; ch[(i) + ido * ((k) + l1 * (3))].i = wa[(i) - 1 + (3 - 1) * (ido - 1)].r * da.i + sign * wa[(i) - 1 + (3 - 1) * (ido - 1)].i * da.r;
-                            }
-                            {
-                                ch[(i) + ido * ((k) + l1 * (4))].r = wa[(i) - 1 + (4 - 1) * (ido - 1)].r * db.r - sign * wa[(i) - 1 + (4 - 1) * (ido - 1)].i * db.i; ch[(i) + ido * ((k) + l1 * (4))].i = wa[(i) - 1 + (4 - 1) * (ido - 1)].r * db.i + sign * wa[(i) - 1 + (4 - 1) * (ido - 1)].i * db.r;
-                            }
-                        }
+                        t1 = cc[(i) + ido * ((0) + cdim * (k))];
+                        Intrinsics.PMC(
+                            ref t2,
+                            ref t7,
+                            ref cc[(i) + ido * ((1) + cdim * (k))],
+                            ref cc[(i) + ido * ((6) + cdim * (k))]);
+                        Intrinsics.PMC(
+                            ref t3,
+                            ref t6,
+                            ref cc[(i) + ido * ((2) + cdim * (k))],
+                            ref cc[(i) + ido * ((5) + cdim * (k))]);
+                        Intrinsics.PMC(
+                            ref t4,
+                            ref t5,
+                            ref cc[(i) + ido * ((3) + cdim * (k))],
+                            ref cc[(i) + ido * ((4) + cdim * (k))]);
+                        Intrinsics.ADDC(ref ch[(i) + ido * ((k) + l1 * (0))], ref t1, ref t2, ref t3, ref t4);
+                        ca.r = t1.r + tw1r * t2.r + tw2r * t3.r + tw3r * t4.r;
+                        ca.i = t1.i + tw1r * t2.i + tw2r * t3.i + tw3r * t4.i;
+                        cb.i = +tw1i * t7.r + tw2i * t6.r + tw3i * t5.r;
+                        cb.r = -(+tw1i * t7.i + tw2i * t6.i + tw3i * t5.i);
+                        da.r = ca.r + cb.r;
+                        da.i = ca.i + cb.i;
+                        db.r = ca.r - cb.r;
+                        db.i = ca.i - cb.i;
+                        Intrinsics.MULPMSIGNC(
+                            ref ch[(i) + ido * ((k) + l1 * (1))],
+                            ref wa[(i) - 1 + (1 - 1) * (ido - 1)],
+                            ref da,
+                            sign);
+                        Intrinsics.MULPMSIGNC(
+                            ref ch[(i) + ido * ((k) + l1 * (6))],
+                            ref wa[(i) - 1 + (6 - 1) * (ido - 1)],
+                            ref db,
+                            sign);
+                        ca.r = t1.r + tw2r * t2.r + tw3r * t3.r + tw1r * t4.r;
+                        ca.i = t1.i + tw2r * t2.i + tw3r * t3.i + tw1r * t4.i;
+                        cb.i = +tw2i * t7.r - tw3i * t6.r - tw1i * t5.r;
+                        cb.r = -(+tw2i * t7.i - tw3i * t6.i - tw1i * t5.i);
+                        da.r = ca.r + cb.r;
+                        da.i = ca.i + cb.i;
+                        db.r = ca.r - cb.r;
+                        db.i = ca.i - cb.i;
+                        Intrinsics.MULPMSIGNC(
+                            ref ch[(i) + ido * ((k) + l1 * (2))],
+                            ref wa[(i) - 1 + (2 - 1) * (ido - 1)],
+                            ref da,
+                            sign);
+                        Intrinsics.MULPMSIGNC(
+                            ref ch[(i) + ido * ((k) + l1 * (5))],
+                            ref wa[(i) - 1 + (5 - 1) * (ido - 1)],
+                            ref db,
+                            sign);
+                        ca.r = t1.r + tw3r * t2.r + tw1r * t3.r + tw2r * t4.r;
+                        ca.i = t1.i + tw3r * t2.i + tw1r * t3.i + tw2r * t4.i;
+                        cb.i = +tw3i * t7.r - tw1i * t6.r + tw2i * t5.r;
+                        cb.r = -(+tw3i * t7.i - tw1i * t6.i + tw2i * t5.i);
+                        da.r = ca.r + cb.r;
+                        da.i = ca.i + cb.i;
+                        db.r = ca.r - cb.r;
+                        db.i = ca.i - cb.i;
+                        Intrinsics.MULPMSIGNC(
+                            ref ch[(i) + ido * ((k) + l1 * (3))],
+                            ref wa[(i) - 1 + (3 - 1) * (ido - 1)],
+                            ref da,
+                            sign);
+                        Intrinsics.MULPMSIGNC(
+                            ref ch[(i) + ido * ((k) + l1 * (4))],
+                            ref wa[(i) - 1 + (4 - 1) * (ido - 1)],
+                            ref db,
+                            sign);
                     }
                 }
+            }
         }
 
-        static void pass11(int ido, int l1, Span<cmplx> cc, Span<cmplx> ch, Span<cmplx> wa, int sign)
+        private static void pass11(int ido, int l1, Span<cmplx> cc, Span<cmplx> ch, Span<cmplx> wa, int sign)
         {
             const int cdim = 11;
             double tw1r = 0.8412535328311811688618,
@@ -1302,7 +1430,6 @@ namespace PocketFFT
             int ipph = (ip + 1) / 2;
             int idl1 = ido * l1;
 
-            if (Constants.NAIL_TEST) NailTest.PrintComplexArray(cc.Slice(0, cdim * l1));
             cmplx[] wal = ArrayPool<cmplx>.Shared.Rent(ip);
             wal[0] = new cmplx(1.0, 0.0);
 
@@ -1325,10 +1452,11 @@ namespace PocketFFT
                 {
                     for (int i = 0; i < ido; ++i)
                     {
-                        ch[(i) + ido * ((k) + l1 * (j))].r = cc[(i) + ido * ((j) + cdim * (k))].r + cc[(i) + ido * ((jc) + cdim * (k))].r;
-                        ch[(i) + ido * ((k) + l1 * (j))].i = cc[(i) + ido * ((j) + cdim * (k))].i + cc[(i) + ido * ((jc) + cdim * (k))].i;
-                        ch[(i) + ido * ((k) + l1 * (jc))].r = cc[(i) + ido * ((j) + cdim * (k))].r - cc[(i) + ido * ((jc) + cdim * (k))].r;
-                        ch[(i) + ido * ((k) + l1 * (jc))].i = cc[(i) + ido * ((j) + cdim * (k))].i - cc[(i) + ido * ((jc) + cdim * (k))].i;
+                        Intrinsics.PMC(
+                            ref ch[(i) + ido * ((k) + l1 * (j))],
+                            ref ch[(i) + ido * ((k) + l1 * (jc))],
+                            ref cc[(i) + ido * ((j) + cdim * (k))],
+                            ref cc[(i) + ido * ((jc) + cdim * (k))]);
                     }
                 }
             }
@@ -1340,8 +1468,7 @@ namespace PocketFFT
                     cmplx tmp = ch[(i) + ido * ((k) + l1 * (0))];
                     for (int j = 1; j < ipph; ++j)
                     {
-                        tmp.r = tmp.r + ch[(i) + ido * ((k) + l1 * (j))].r;
-                        tmp.i = tmp.i + ch[(i) + ido * ((k) + l1 * (j))].i;
+                        Intrinsics.ADDC(ref tmp, ref tmp, ref ch[(i) + ido * ((k) + l1 * (j))]);
                     }
 
                     cc[(i) + ido * ((k) + l1 * (0))] = tmp;
@@ -1353,39 +1480,69 @@ namespace PocketFFT
                 // j=0
                 for (int ik = 0; ik < idl1; ++ik)
                 {
-                    cc[(ik) + idl1 * (l)].r = ch[(ik) + idl1 * (0)].r + wal[l].r * ch[(ik) + idl1 * (1)].r + wal[2 * l].r * ch[(ik) + idl1 * (2)].r;
-                    cc[(ik) + idl1 * (l)].i = ch[(ik) + idl1 * (0)].i + wal[l].r * ch[(ik) + idl1 * (1)].i + wal[2 * l].r * ch[(ik) + idl1 * (2)].i;
-                    cc[(ik) + idl1 * (lc)].r = -wal[l].i * ch[(ik) + idl1 * (ip - 1)].i - wal[2 * l].i * ch[(ik) + idl1 * (ip - 2)].i;
-                    cc[(ik) + idl1 * (lc)].i = wal[l].i * ch[(ik) + idl1 * (ip - 1)].r + wal[2 * l].i * ch[(ik) + idl1 * (ip - 2)].r;
+                    Intrinsics.PASSG1(
+                        ref cc[(ik) + idl1 * (l)],
+                        ref ch[(ik) + idl1 * (0)],
+                        ref wal[l],
+                        ref ch[(ik) + idl1 * (1)],
+                        ref wal[2 * l],
+                        ref ch[(ik) + idl1 * (2)]);
+                    Intrinsics.PASSG2(
+                        ref cc[(ik) + idl1 * (lc)],
+                        ref wal[l],
+                        ref ch[(ik) + idl1 * (ip - 1)],
+                        ref wal[2 * l],
+                        ref ch[(ik) + idl1 * (ip - 2)]);
                 }
 
                 int iwal = 2 * l;
                 int j = 3, jc = ip - 3;
                 for (; j < ipph - 1; j += 2, jc -= 2)
                 {
-                    iwal += l; if (iwal > ip) iwal -= ip;
+                    iwal += l;
+                    if (iwal > ip)
+                    {
+                        iwal -= ip;
+                    }
+
                     cmplx xwal = wal[iwal];
-                    iwal += l; if (iwal > ip) iwal -= ip;
+                    iwal += l;
+                    if (iwal > ip)
+                    {
+                        iwal -= ip;
+                    }
+
                     cmplx xwal2 = wal[iwal];
                     for (int ik = 0; ik < idl1; ++ik)
                     {
-                        cc[(ik) + idl1 * (l)].r += ch[(ik) + idl1 * (j)].r * xwal.r + ch[(ik) + idl1 * (j + 1)].r * xwal2.r;
-                        cc[(ik) + idl1 * (l)].i += ch[(ik) + idl1 * (j)].i * xwal.r + ch[(ik) + idl1 * (j + 1)].i * xwal2.r;
-                        cc[(ik) + idl1 * (lc)].r -= ch[(ik) + idl1 * (jc)].i * xwal.i + ch[(ik) + idl1 * (jc - 1)].i * xwal2.i;
-                        cc[(ik) + idl1 * (lc)].i += ch[(ik) + idl1 * (jc)].r * xwal.i + ch[(ik) + idl1 * (jc - 1)].r * xwal2.i;
+                        Intrinsics.PASSG3(
+                            ref cc[(ik) + idl1 * (l)],
+                            ref ch[(ik) + idl1 * (j)],
+                            ref xwal,
+                            ref ch[(ik) + idl1 * (j + 1)],
+                            ref xwal2);
+                        Intrinsics.PASSG4(
+                            ref cc[(ik) + idl1 * (lc)],
+                            ref ch[(ik) + idl1 * (jc)],
+                            ref xwal,
+                            ref ch[(ik) + idl1 * (jc - 1)],
+                            ref xwal2);
                     }
                 }
 
                 for (; j < ipph; ++j, --jc)
                 {
-                    iwal += l; if (iwal > ip) iwal -= ip;
+                    iwal += l;
+                    if (iwal > ip)
+                    {
+                        iwal -= ip;
+                    }
+
                     cmplx xwal = wal[iwal];
                     for (int ik = 0; ik < idl1; ++ik)
                     {
-                        cc[(ik) + idl1 * (l)].r += ch[(ik) + idl1 * (j)].r * xwal.r;
-                        cc[(ik) + idl1 * (l)].i += ch[(ik) + idl1 * (j)].i * xwal.r;
-                        cc[(ik) + idl1 * (lc)].r -= ch[(ik) + idl1 * (jc)].i * xwal.i;
-                        cc[(ik) + idl1 * (lc)].i += ch[(ik) + idl1 * (jc)].r * xwal.i;
+                        Intrinsics.PASSG5(ref cc[(ik) + idl1 * (l)],  ref ch[(ik) + idl1 * (j)],  ref xwal);
+                        Intrinsics.PASSG6(ref cc[(ik) + idl1 * (lc)], ref ch[(ik) + idl1 * (jc)], ref xwal);
                     }
                 }
             }
@@ -1400,8 +1557,11 @@ namespace PocketFFT
                     for (int ik = 0; ik < idl1; ++ik)
                     {
                         cmplx t1 = cc[(ik) + idl1 * (j)], t2 = cc[(ik) + idl1 * (jc)];
-                        cc[(ik) + idl1 * (j)].r = t1.r + t2.r; cc[(ik) + idl1 * (j)].i = t1.i + t2.i;
-                        cc[(ik) + idl1 * (jc)].r = t1.r - t2.r; cc[(ik) + idl1 * (jc)].i = t1.i - t2.i;
+                        Intrinsics.PMC(
+                            ref cc[(ik) + idl1 * (j)],
+                            ref cc[(ik) + idl1 * (jc)],
+                            ref t1,
+                            ref t2);
                     }
                 }
             }
@@ -1412,25 +1572,31 @@ namespace PocketFFT
                     for (int k = 0; k < l1; ++k)
                     {
                         cmplx t1 = cc[(0) + ido * ((k) + l1 * (j))], t2 = cc[(0) + ido * ((k) + l1 * (jc))];
-                        cc[(0) + ido * ((k) + l1 * (j))].r = t1.r + t2.r;
-                        cc[(0) + ido * ((k) + l1 * (j))].i = t1.i + t2.i;
-                        cc[(0) + ido * ((k) + l1 * (jc))].r = t1.r - t2.r;
-                        cc[(0) + ido * ((k) + l1 * (jc))].i = t1.i - t2.i;
+                        Intrinsics.PMC(
+                            ref cc[(0) + ido * ((k) + l1 * (j))],
+                            ref cc[(0) + ido * ((k) + l1 * (jc))],
+                            ref t1,
+                            ref t2);
 
                         for (int i = 1; i < ido; ++i)
                         {
-                            cmplx x1, x2;
-                            x1.r = cc[(i) + ido * ((k) + l1 * (j))].r + cc[(i) + ido * ((k) + l1 * (jc))].r;
-                            x1.i = cc[(i) + ido * ((k) + l1 * (j))].i + cc[(i) + ido * ((k) + l1 * (jc))].i;
-                            x2.r = cc[(i) + ido * ((k) + l1 * (j))].r - cc[(i) + ido * ((k) + l1 * (jc))].r;
-                            x2.i = cc[(i) + ido * ((k) + l1 * (j))].i - cc[(i) + ido * ((k) + l1 * (jc))].i;
-
+                            Intrinsics.PMC(
+                                ref t1,
+                                ref t2,
+                                ref cc[(i) + ido * ((k) + l1 * (j))],
+                                ref cc[(i) + ido * ((k) + l1 * (jc))]);
                             int idij = (j - 1) * (ido - 1) + i - 1;
-                            cc[(i) + ido * ((k) + l1 * (j))].r = wa[idij].r * x1.r - sign * wa[idij].i * x1.i;
-                            cc[(i) + ido * ((k) + l1 * (j))].i = wa[idij].r * x1.i + sign * wa[idij].i * x1.r;
+                            Intrinsics.MULPMSIGNC(
+                                ref cc[(i) + ido * ((k) + l1 * (j))],
+                                ref wa[idij],
+                                ref t1,
+                                sign);
                             idij = (jc - 1) * (ido - 1) + i - 1;
-                            cc[(i) + ido * ((k) + l1 * (jc))].r = wa[idij].r * x2.r - sign * wa[idij].i * x2.i;
-                            cc[(i) + ido * ((k) + l1 * (jc))].i = wa[idij].r * x2.i + sign * wa[idij].i * x2.r;
+                            Intrinsics.MULPMSIGNC(
+                                ref cc[(i) + ido * ((k) + l1 * (jc))],
+                                ref wa[idij],
+                                ref t2,
+                                sign);
                         }
                     }
                 }

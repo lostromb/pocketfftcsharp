@@ -352,6 +352,55 @@ namespace PocketFFT
             a.r = b.r + c.r;
             a.i = b.i + c.i;
         }
+
+        internal static void ADDC(ref cmplx a, ref cmplx b, ref cmplx c, ref cmplx d)
+        {
+            a.r = b.r + c.r + d.r;
+            a.i = b.i + c.i + d.i;
+        }
+
+        internal static void ADDC(ref cmplx a, ref cmplx b, ref cmplx c, ref cmplx d, ref cmplx e)
+        {
+            a.r = b.r + c.r + d.r + e.r;
+            a.i = b.i + c.i + d.i + e.i;
+        }
+
+        internal static void PASSG1(ref cmplx a, ref cmplx b, ref cmplx c, ref cmplx d, ref cmplx e, ref cmplx f)
+        {
+            a.r = b.r + c.r * d.r + e.r * f.r;
+            a.i = b.i + c.r * d.i + e.r * f.i;
+        }
+
+        internal static void PASSG2(ref cmplx a, ref cmplx b, ref cmplx c, ref cmplx d, ref cmplx e)
+        {
+            a.r = -b.i * c.i - d.i * e.i;
+            a.i = b.i * c.r + d.i * e.r;
+        }
+
+        internal static void PASSG3(ref cmplx a, ref cmplx b, ref cmplx c, ref cmplx d, ref cmplx e)
+        {
+            a.r += b.r * c.r + d.r * e.r;
+            a.i += b.i * c.r + d.i * e.r;
+        }
+
+        internal static void PASSG4(ref cmplx a, ref cmplx b, ref cmplx c, ref cmplx d, ref cmplx e)
+        {
+            a.r -= b.i * c.i + d.i * e.i;
+            a.i += b.r * c.i + d.r * e.i;
+        }
+
+        internal static void PASSG5(ref cmplx a, ref cmplx b, ref cmplx c)
+        {
+            a.r += b.r * c.r;
+            a.i += b.i * c.r;
+        }
+
+        internal static void PASSG6(ref cmplx a, ref cmplx b, ref cmplx c)
+        {
+            a.r -= b.i * c.i;
+            a.i += b.r * c.i;
+        }
+
         internal static void SUBC(ref cmplx a, ref cmplx b, ref cmplx c)
         {
             a.r = b.r - c.r;

@@ -288,7 +288,7 @@ namespace PocketFFT
             {
                 if (fct != 1.0)
                 {
-#if OPTIMIZE && NET8_0_OR_GREATER
+#if NET8_0_OR_GREATER
                     int idx = 0;
                     int endIdx = n;
                     if (Vector.IsHardwareAccelerated)

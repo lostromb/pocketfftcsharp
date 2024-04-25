@@ -62,3 +62,17 @@ Optimize pass5 and passg
 | Complex | 2310            |  61,939.7 ns |   228.03 ns |   202.14 ns |         - |
 | Real    | 5980            | 179,074.0 ns | 1,403.53 ns | 1,312.86 ns |         - |
 | Complex | 5980            | 284,480.7 ns |   876.74 ns |   820.10 ns |         - |
+
+optimize pass7 ?
+| Method  | TransformLength | Mean         | Error       | StdDev      | Allocated |
+|-------- |---------------- |-------------:|------------:|------------:|----------:|
+| Real    | 64              |     484.8 ns |     9.35 ns |     9.18 ns |         - |
+| Complex | 64              |     709.5 ns |    11.88 ns |    14.59 ns |         - |
+| Real    | 191             |  14,229.5 ns |    92.49 ns |    77.23 ns |         - |
+| Complex | 191             |  13,975.3 ns |    73.94 ns |    65.54 ns |         - |
+| Real    | 1000            |  10,632.1 ns |    47.37 ns |    41.99 ns |         - |
+| Complex | 1000            |  17,341.8 ns |    32.53 ns |    25.39 ns |         - |
+| Real    | 2310            |  56,912.4 ns |   371.65 ns |   310.35 ns |         - |
+| Complex | 2310            |  59,450.6 ns |   607.11 ns |   506.96 ns |         - |
+| Real    | 5980            | 177,858.4 ns |   804.23 ns |   752.27 ns |         - |
+| Complex | 5980            | 285,497.0 ns | 2,743.45 ns | 2,290.91 ns |         - |

@@ -770,7 +770,9 @@ namespace PocketFFT
                         ref t3,
                         ref cc[(0) + ido * ((2) + cdim * (k))],
                         ref cc[(0) + ido * ((3) + cdim * (k))]);
-                    Intrinsics.ADDC(ref ch[(0) + ido * ((k) + l1 * (0))], ref t0, ref t1, ref t2);
+                    ref cmplx z = ref ch[(0) + ido * ((k) + l1 * (0))];
+                    z.r = t0.r + t1.r + t2.r;
+                    z.i = t0.i + t1.i + t2.i;
 
                     ca.r = t0.r + tw1r * t1.r + tw2r * t2.r;
                     ca.i = t0.i + tw1r * t1.i + tw2r * t2.i;
@@ -811,7 +813,9 @@ namespace PocketFFT
                         ref t3,
                         ref cc[(0) + ido * ((2) + cdim * (k))],
                         ref cc[(0) + ido * ((3) + cdim * (k))]);
-                    Intrinsics.ADDC(ref ch[(0) + ido * ((k) + l1 * (0))], ref t0, ref t1, ref t2);
+                    ref cmplx z = ref ch[(0) + ido * ((k) + l1 * (0))];
+                    z.r = t0.r + t1.r + t2.r;
+                    z.i = t0.i + t1.i + t2.i;
 
                     ca.r = t0.r + tw1r * t1.r + tw2r * t2.r;
                     ca.i = t0.i + tw1r * t1.i + tw2r * t2.i;
@@ -849,7 +853,9 @@ namespace PocketFFT
                             ref t3,
                             ref cc[(i) + ido * ((2) + cdim * (k))],
                             ref cc[(i) + ido * ((3) + cdim * (k))]);
-                        Intrinsics.ADDC(ref ch[(i) + ido * ((k) + l1 * (0))], ref t0, ref t1, ref t2);
+                        z = ref ch[(i) + ido * ((k) + l1 * (0))];
+                        z.r = t0.r + t1.r + t2.r;
+                        z.i = t0.i + t1.i + t2.i;
                         ca.r = t0.r + tw1r * t1.r + tw2r * t2.r;
                         ca.i = t0.i + tw1r * t1.i + tw2r * t2.i;
                         cb.i = tw1i * t4.r + tw2i * t3.r;
@@ -905,7 +911,9 @@ namespace PocketFFT
                         ref t3,
                         ref cc[(0) + ido * ((2) + cdim * (k))],
                         ref cc[(0) + ido * ((3) + cdim * (k))]);
-                    Intrinsics.ADDC(ref ch[(0) + ido * ((k) + l1 * (0))], ref t0, ref t1, ref t2);
+                    ref cmplx z = ref ch[(0) + ido * ((k) + l1 * (0))];
+                    z.r = t0.r + t1.r + t2.r;
+                    z.i = t0.i + t1.i + t2.i;
 
                     ca.r = t0.r + tw1r * t1.r + tw2r * t2.r;
                     ca.i = t0.i + tw1r * t1.i + tw2r * t2.i;
@@ -946,7 +954,9 @@ namespace PocketFFT
                         ref t3,
                         ref cc[(0) + ido * ((2) + cdim * (k))],
                         ref cc[(0) + ido * ((3) + cdim * (k))]);
-                    Intrinsics.ADDC(ref ch[(0) + ido * ((k) + l1 * (0))], ref t0, ref t1, ref t2);
+                    ref cmplx z = ref ch[(0) + ido * ((k) + l1 * (0))];
+                    z.r = t0.r + t1.r + t2.r;
+                    z.i = t0.i + t1.i + t2.i;
 
                     ca.r = t0.r + tw1r * t1.r + tw2r * t2.r;
                     ca.i = t0.i + tw1r * t1.i + tw2r * t2.i;
@@ -984,7 +994,9 @@ namespace PocketFFT
                             ref t3,
                             ref cc[(i) + ido * ((2) + cdim * (k))],
                             ref cc[(i) + ido * ((3) + cdim * (k))]);
-                        Intrinsics.ADDC(ref ch[(i) + ido * ((k) + l1 * (0))], ref t0, ref t1, ref t2);
+                        z = ref ch[(i) + ido * ((k) + l1 * (0))];
+                        z.r = t0.r + t1.r + t2.r;
+                        z.i = t0.i + t1.i + t2.i;
                         ca.r = t0.r + tw1r * t1.r + tw2r * t2.r;
                         ca.i = t0.i + tw1r * t1.i + tw2r * t2.i;
 
@@ -1030,6 +1042,7 @@ namespace PocketFFT
 
             cmplx t1 = default, t2 = default, t3 = default, t4 = default, t5 = default, t6 = default, t7 = default;
             cmplx ca = default, cb = default, da = default, db = default;
+
             if (ido == 1)
             {
                 for (int k = 0; k < l1; ++k)
@@ -1050,8 +1063,9 @@ namespace PocketFFT
                         ref t5,
                         ref cc[(0) + ido * ((3) + cdim * (k))],
                         ref cc[(0) + ido * ((4) + cdim * (k))]);
-                    Intrinsics.ADDC(ref ch[(0) + ido * ((k) + l1 * (0))], ref t1, ref t2, ref t3, ref t4);
-
+                    ref cmplx z = ref ch[(0) + ido * ((k) + l1 * (0))];
+                    z.r = t1.r + t2.r + t3.r + t4.r;
+                    z.i = t1.i + t2.i + t3.i + t4.i;
                     ca.r = t1.r + tw1r * t2.r + tw2r * t3.r + tw3r * t4.r;
                     ca.i = t1.i + tw1r * t2.i + tw2r * t3.i + tw3r * t4.i;
                     cb.i = +tw1i * t7.r + tw2i * t6.r + tw3i * t5.r;
@@ -1101,7 +1115,9 @@ namespace PocketFFT
                         ref t5,
                         ref cc[(0) + ido * ((3) + cdim * (k))],
                         ref cc[(0) + ido * ((4) + cdim * (k))]);
-                    Intrinsics.ADDC(ref ch[(0) + ido * ((k) + l1 * (0))], ref t1, ref t2, ref t3, ref t4);
+                    ref cmplx z = ref ch[(0) + ido * ((k) + l1 * (0))];
+                    z.r = t1.r + t2.r + t3.r + t4.r;
+                    z.i = t1.i + t2.i + t3.i + t4.i;
                     ca.r = t1.r + tw1r * t2.r + tw2r * t3.r + tw3r * t4.r;
                     ca.i = t1.i + tw1r * t2.i + tw2r * t3.i + tw3r * t4.i;
                     cb.i = +tw1i * t7.r + tw2i * t6.r + tw3i * t5.r;
@@ -1148,7 +1164,9 @@ namespace PocketFFT
                             ref t5,
                             ref cc[(i) + ido * ((3) + cdim * (k))],
                             ref cc[(i) + ido * ((4) + cdim * (k))]);
-                        Intrinsics.ADDC(ref ch[(i) + ido * ((k) + l1 * (0))], ref t1, ref t2, ref t3, ref t4);
+                        z = ref ch[(i) + ido * ((k) + l1 * (0))];
+                        z.r = t1.r + t2.r + t3.r + t4.r;
+                        z.i = t1.i + t2.i + t3.i + t4.i;
                         ca.r = t1.r + tw1r * t2.r + tw2r * t3.r + tw3r * t4.r;
                         ca.i = t1.i + tw1r * t2.i + tw2r * t3.i + tw3r * t4.i;
                         cb.i = +tw1i * t7.r + tw2i * t6.r + tw3i * t5.r;
@@ -1222,209 +1240,286 @@ namespace PocketFFT
                 tw5r = -0.9594929736144973898904,
                 tw5i = sign * 0.2817325568414296977114;
 
-            if (Constants.NAIL_TEST) NailTest.PrintComplexArray(cc.Slice(0, cdim * l1));
+            cmplx t1 = default, t2 = default, t3 = default, t4 = default, t5 = default, t6 = default, t7 = default, t8 = default, t9 = default, t10 = default, t11 = default;
+            cmplx ca = default, cb = default, da = default, db = default;
             if (ido == 1)
-                for (int k = 0; k < l1; ++k)
+            {
+                for (int k = 0;k < l1; ++k)
                 {
-                    cmplx t1 = cc[(0) + ido * ((0) + cdim * (k))], t2, t3, t4, t5, t6, t7, t8, t9, t10, t11;
-                    {
-                        t2.r = cc[(0) + ido * ((1) + cdim * (k))].r + cc[(0) + ido * ((10) + cdim * (k))].r; t2.i = cc[(0) + ido * ((1) + cdim * (k))].i + cc[(0) + ido * ((10) + cdim * (k))].i; t11.r = cc[(0) + ido * ((1) + cdim * (k))].r - cc[(0) + ido * ((10) + cdim * (k))].r; t11.i = cc[(0) + ido * ((1) + cdim * (k))].i - cc[(0) + ido * ((10) + cdim * (k))].i;
-                    }
-                    {
-                        t3.r = cc[(0) + ido * ((2) + cdim * (k))].r + cc[(0) + ido * ((9) + cdim * (k))].r; t3.i = cc[(0) + ido * ((2) + cdim * (k))].i + cc[(0) + ido * ((9) + cdim * (k))].i; t10.r = cc[(0) + ido * ((2) + cdim * (k))].r - cc[(0) + ido * ((9) + cdim * (k))].r; t10.i = cc[(0) + ido * ((2) + cdim * (k))].i - cc[(0) + ido * ((9) + cdim * (k))].i;
-                    }
-                    {
-                        t4.r = cc[(0) + ido * ((3) + cdim * (k))].r + cc[(0) + ido * ((8) + cdim * (k))].r; t4.i = cc[(0) + ido * ((3) + cdim * (k))].i + cc[(0) + ido * ((8) + cdim * (k))].i; t9.r = cc[(0) + ido * ((3) + cdim * (k))].r - cc[(0) + ido * ((8) + cdim * (k))].r; t9.i = cc[(0) + ido * ((3) + cdim * (k))].i - cc[(0) + ido * ((8) + cdim * (k))].i;
-                    }
-                    {
-                        t5.r = cc[(0) + ido * ((4) + cdim * (k))].r + cc[(0) + ido * ((7) + cdim * (k))].r; t5.i = cc[(0) + ido * ((4) + cdim * (k))].i + cc[(0) + ido * ((7) + cdim * (k))].i; t8.r = cc[(0) + ido * ((4) + cdim * (k))].r - cc[(0) + ido * ((7) + cdim * (k))].r; t8.i = cc[(0) + ido * ((4) + cdim * (k))].i - cc[(0) + ido * ((7) + cdim * (k))].i;
-                    }
-                    {
-                        t6.r = cc[(0) + ido * ((5) + cdim * (k))].r + cc[(0) + ido * ((6) + cdim * (k))].r; t6.i = cc[(0) + ido * ((5) + cdim * (k))].i + cc[(0) + ido * ((6) + cdim * (k))].i; t7.r = cc[(0) + ido * ((5) + cdim * (k))].r - cc[(0) + ido * ((6) + cdim * (k))].r; t7.i = cc[(0) + ido * ((5) + cdim * (k))].i - cc[(0) + ido * ((6) + cdim * (k))].i;
-                    }
-                    ch[(0) + ido * ((k) + l1 * (0))].r = t1.r + t2.r + t3.r + t4.r + t5.r + t6.r; ch[(0) + ido * ((k) + l1 * (0))].i = t1.i + t2.i + t3.i + t4.i + t5.i + t6.i;
-                    {
-                        cmplx ca, cb; ca.r = t1.r + tw1r * t2.r + tw2r * t3.r + tw3r * t4.r + tw4r * t5.r + tw5r * t6.r; ca.i = t1.i + tw1r * t2.i + tw2r * t3.i + tw3r * t4.i + tw4r * t5.i + tw5r * t6.i; cb.i = +tw1i * t11.r + tw2i * t10.r + tw3i * t9.r + tw4i * t8.r + tw5i * t7.r; cb.r = -(+tw1i * t11.i + tw2i * t10.i + tw3i * t9.i + tw4i * t8.i + tw5i * t7.i);
-                        {
-                            ch[(0) + ido * ((k) + l1 * (1))].r = ca.r + cb.r; ch[(0) + ido * ((k) + l1 * (1))].i = ca.i + cb.i; ch[(0) + ido * ((k) + l1 * (10))].r = ca.r - cb.r; ch[(0) + ido * ((k) + l1 * (10))].i = ca.i - cb.i;
-                        }
-                    }
-                    {
-                        cmplx ca, cb; ca.r = t1.r + tw2r * t2.r + tw4r * t3.r + tw5r * t4.r + tw3r * t5.r + tw1r * t6.r; ca.i = t1.i + tw2r * t2.i + tw4r * t3.i + tw5r * t4.i + tw3r * t5.i + tw1r * t6.i; cb.i = +tw2i * t11.r + tw4i * t10.r - tw5i * t9.r - tw3i * t8.r - tw1i * t7.r; cb.r = -(+tw2i * t11.i + tw4i * t10.i - tw5i * t9.i - tw3i * t8.i - tw1i * t7.i);
-                        {
-                            ch[(0) + ido * ((k) + l1 * (2))].r = ca.r + cb.r; ch[(0) + ido * ((k) + l1 * (2))].i = ca.i + cb.i; ch[(0) + ido * ((k) + l1 * (9))].r = ca.r - cb.r; ch[(0) + ido * ((k) + l1 * (9))].i = ca.i - cb.i;
-                        }
-                    }
-                    {
-                        cmplx ca, cb; ca.r = t1.r + tw3r * t2.r + tw5r * t3.r + tw2r * t4.r + tw1r * t5.r + tw4r * t6.r; ca.i = t1.i + tw3r * t2.i + tw5r * t3.i + tw2r * t4.i + tw1r * t5.i + tw4r * t6.i; cb.i = +tw3i * t11.r - tw5i * t10.r - tw2i * t9.r + tw1i * t8.r + tw4i * t7.r; cb.r = -(+tw3i * t11.i - tw5i * t10.i - tw2i * t9.i + tw1i * t8.i + tw4i * t7.i);
-                        {
-                            ch[(0) + ido * ((k) + l1 * (3))].r = ca.r + cb.r; ch[(0) + ido * ((k) + l1 * (3))].i = ca.i + cb.i; ch[(0) + ido * ((k) + l1 * (8))].r = ca.r - cb.r; ch[(0) + ido * ((k) + l1 * (8))].i = ca.i - cb.i;
-                        }
-                    }
-                    {
-                        cmplx ca, cb; ca.r = t1.r + tw4r * t2.r + tw3r * t3.r + tw1r * t4.r + tw5r * t5.r + tw2r * t6.r; ca.i = t1.i + tw4r * t2.i + tw3r * t3.i + tw1r * t4.i + tw5r * t5.i + tw2r * t6.i; cb.i = +tw4i * t11.r - tw3i * t10.r + tw1i * t9.r + tw5i * t8.r - tw2i * t7.r; cb.r = -(+tw4i * t11.i - tw3i * t10.i + tw1i * t9.i + tw5i * t8.i - tw2i * t7.i);
-                        {
-                            ch[(0) + ido * ((k) + l1 * (4))].r = ca.r + cb.r; ch[(0) + ido * ((k) + l1 * (4))].i = ca.i + cb.i; ch[(0) + ido * ((k) + l1 * (7))].r = ca.r - cb.r; ch[(0) + ido * ((k) + l1 * (7))].i = ca.i - cb.i;
-                        }
-                    }
-                    {
-                        cmplx ca, cb; ca.r = t1.r + tw5r * t2.r + tw1r * t3.r + tw4r * t4.r + tw2r * t5.r + tw3r * t6.r; ca.i = t1.i + tw5r * t2.i + tw1r * t3.i + tw4r * t4.i + tw2r * t5.i + tw3r * t6.i; cb.i = +tw5i * t11.r - tw1i * t10.r + tw4i * t9.r - tw2i * t8.r + tw3i * t7.r; cb.r = -(+tw5i * t11.i - tw1i * t10.i + tw4i * t9.i - tw2i * t8.i + tw3i * t7.i);
-                        {
-                            ch[(0) + ido * ((k) + l1 * (5))].r = ca.r + cb.r; ch[(0) + ido * ((k) + l1 * (5))].i = ca.i + cb.i; ch[(0) + ido * ((k) + l1 * (6))].r = ca.r - cb.r; ch[(0) + ido * ((k) + l1 * (6))].i = ca.i - cb.i;
-                        }
-                    }
+                    t1 = cc[(0) + ido * ((0) + cdim * (k))];
+
+                    Intrinsics.PMC(
+                        ref t2,
+                        ref t11,
+                        ref cc[(0) + ido * ((1) + cdim * (k))],
+                        ref cc[(0) + ido * ((10) + cdim * (k))]);
+                    Intrinsics.PMC(
+                        ref t3,
+                        ref t10,
+                        ref cc[(0) + ido * ((2) + cdim * (k))],
+                        ref cc[(0) + ido * ((9) + cdim * (k))]);
+                    Intrinsics.PMC(
+                        ref t4,
+                        ref t9,
+                        ref cc[(0) + ido * ((3) + cdim * (k))],
+                        ref cc[(0) + ido * ((8) + cdim * (k))]);
+                    Intrinsics.PMC(
+                        ref t5,
+                        ref t8,
+                        ref cc[(0) + ido * ((4) + cdim * (k))],
+                        ref cc[(0) + ido * ((7) + cdim * (k))]);
+                    Intrinsics.PMC(
+                        ref t6,
+                        ref t7,
+                        ref cc[(0) + ido * ((5) + cdim * (k))],
+                        ref cc[(0) + ido * ((6) + cdim * (k))]);
+
+                    ref cmplx z = ref ch[(0) + ido * ((k) + l1 * (0))];
+                    z.r = t1.r + t2.r + t3.r + t4.r + t5.r + t6.r;
+                    z.i = t1.i + t2.i + t3.i + t4.i + t5.i + t6.i;
+
+                    ca.r = t1.r + tw1r * t2.r + tw2r * t3.r + tw3r * t4.r + tw4r * t5.r + tw5r * t6.r;
+                    ca.i = t1.i + tw1r * t2.i + tw2r * t3.i + tw3r * t4.i + tw4r * t5.i + tw5r * t6.i;
+                    cb.i = +tw1i * t11.r + tw2i * t10.r + tw3i * t9.r + tw4i * t8.r + tw5i * t7.r;
+                    cb.r = -(+tw1i * t11.i + tw2i * t10.i + tw3i * t9.i + tw4i * t8.i + tw5i * t7.i);
+                    ch[(0) + ido * ((k) + l1 * (1))].r = ca.r + cb.r;
+                    ch[(0) + ido * ((k) + l1 * (1))].i = ca.i + cb.i;
+                    ch[(0) + ido * ((k) + l1 * (10))].r = ca.r - cb.r;
+                    ch[(0) + ido * ((k) + l1 * (10))].i = ca.i - cb.i;
+
+                    ca.r = t1.r + tw2r * t2.r + tw4r * t3.r + tw5r * t4.r + tw3r * t5.r + tw1r * t6.r;
+                    ca.i = t1.i + tw2r * t2.i + tw4r * t3.i + tw5r * t4.i + tw3r * t5.i + tw1r * t6.i;
+                    cb.i = +tw2i * t11.r + tw4i * t10.r - tw5i * t9.r - tw3i * t8.r - tw1i * t7.r;
+                    cb.r = -(+tw2i * t11.i + tw4i * t10.i - tw5i * t9.i - tw3i * t8.i - tw1i * t7.i);
+                    ch[(0) + ido * ((k) + l1 * (2))].r = ca.r + cb.r;
+                    ch[(0) + ido * ((k) + l1 * (2))].i = ca.i + cb.i;
+                    ch[(0) + ido * ((k) + l1 * (9))].r = ca.r - cb.r;
+                    ch[(0) + ido * ((k) + l1 * (9))].i = ca.i - cb.i;
+
+                    ca.r = t1.r + tw3r * t2.r + tw5r * t3.r + tw2r * t4.r + tw1r * t5.r + tw4r * t6.r;
+                    ca.i = t1.i + tw3r * t2.i + tw5r * t3.i + tw2r * t4.i + tw1r * t5.i + tw4r * t6.i;
+                    cb.i = +tw3i * t11.r - tw5i * t10.r - tw2i * t9.r + tw1i * t8.r + tw4i * t7.r;
+                    cb.r = -(+tw3i * t11.i - tw5i * t10.i - tw2i * t9.i + tw1i * t8.i + tw4i * t7.i);
+
+                    ch[(0) + ido * ((k) + l1 * (3))].r = ca.r + cb.r;
+                    ch[(0) + ido * ((k) + l1 * (3))].i = ca.i + cb.i;
+                    ch[(0) + ido * ((k) + l1 * (8))].r = ca.r - cb.r;
+                    ch[(0) + ido * ((k) + l1 * (8))].i = ca.i - cb.i;
+
+                    ca.r = t1.r + tw4r * t2.r + tw3r * t3.r + tw1r * t4.r + tw5r * t5.r + tw2r * t6.r;
+                    ca.i = t1.i + tw4r * t2.i + tw3r * t3.i + tw1r * t4.i + tw5r * t5.i + tw2r * t6.i;
+                    cb.i = +tw4i * t11.r - tw3i * t10.r + tw1i * t9.r + tw5i * t8.r - tw2i * t7.r;
+                    cb.r = -(+tw4i * t11.i - tw3i * t10.i + tw1i * t9.i + tw5i * t8.i - tw2i * t7.i);
+
+                    ch[(0) + ido * ((k) + l1 * (4))].r = ca.r + cb.r;
+                    ch[(0) + ido * ((k) + l1 * (4))].i = ca.i + cb.i;
+                    ch[(0) + ido * ((k) + l1 * (7))].r = ca.r - cb.r;
+                    ch[(0) + ido * ((k) + l1 * (7))].i = ca.i - cb.i;
+
+                    ca.r = t1.r + tw5r * t2.r + tw1r * t3.r + tw4r * t4.r + tw2r * t5.r + tw3r * t6.r;
+                    ca.i = t1.i + tw5r * t2.i + tw1r * t3.i + tw4r * t4.i + tw2r * t5.i + tw3r * t6.i;
+                    cb.i = +tw5i * t11.r - tw1i * t10.r + tw4i * t9.r - tw2i * t8.r + tw3i * t7.r;
+                    cb.r = -(+tw5i * t11.i - tw1i * t10.i + tw4i * t9.i - tw2i * t8.i + tw3i * t7.i);
+                    ch[(0) + ido * ((k) + l1 * (5))].r = ca.r + cb.r;
+                    ch[(0) + ido * ((k) + l1 * (5))].i = ca.i + cb.i;
+                    ch[(0) + ido * ((k) + l1 * (6))].r = ca.r - cb.r;
+                    ch[(0) + ido * ((k) + l1 * (6))].i = ca.i - cb.i;
                 }
+            }
             else
+            {
                 for (int k = 0; k < l1; ++k)
                 {
-                    {
-                        cmplx t1 = cc[(0) + ido * ((0) + cdim * (k))], t2, t3, t4, t5, t6, t7, t8, t9, t10, t11;
-                        {
-                            t2.r = cc[(0) + ido * ((1) + cdim * (k))].r + cc[(0) + ido * ((10) + cdim * (k))].r; t2.i = cc[(0) + ido * ((1) + cdim * (k))].i + cc[(0) + ido * ((10) + cdim * (k))].i; t11.r = cc[(0) + ido * ((1) + cdim * (k))].r - cc[(0) + ido * ((10) + cdim * (k))].r; t11.i = cc[(0) + ido * ((1) + cdim * (k))].i - cc[(0) + ido * ((10) + cdim * (k))].i;
-                        }
-                        {
-                            t3.r = cc[(0) + ido * ((2) + cdim * (k))].r + cc[(0) + ido * ((9) + cdim * (k))].r; t3.i = cc[(0) + ido * ((2) + cdim * (k))].i + cc[(0) + ido * ((9) + cdim * (k))].i; t10.r = cc[(0) + ido * ((2) + cdim * (k))].r - cc[(0) + ido * ((9) + cdim * (k))].r; t10.i = cc[(0) + ido * ((2) + cdim * (k))].i - cc[(0) + ido * ((9) + cdim * (k))].i;
-                        }
-                        {
-                            t4.r = cc[(0) + ido * ((3) + cdim * (k))].r + cc[(0) + ido * ((8) + cdim * (k))].r; t4.i = cc[(0) + ido * ((3) + cdim * (k))].i + cc[(0) + ido * ((8) + cdim * (k))].i; t9.r = cc[(0) + ido * ((3) + cdim * (k))].r - cc[(0) + ido * ((8) + cdim * (k))].r; t9.i = cc[(0) + ido * ((3) + cdim * (k))].i - cc[(0) + ido * ((8) + cdim * (k))].i;
-                        }
-                        {
-                            t5.r = cc[(0) + ido * ((4) + cdim * (k))].r + cc[(0) + ido * ((7) + cdim * (k))].r; t5.i = cc[(0) + ido * ((4) + cdim * (k))].i + cc[(0) + ido * ((7) + cdim * (k))].i; t8.r = cc[(0) + ido * ((4) + cdim * (k))].r - cc[(0) + ido * ((7) + cdim * (k))].r; t8.i = cc[(0) + ido * ((4) + cdim * (k))].i - cc[(0) + ido * ((7) + cdim * (k))].i;
-                        }
-                        {
-                            t6.r = cc[(0) + ido * ((5) + cdim * (k))].r + cc[(0) + ido * ((6) + cdim * (k))].r; t6.i = cc[(0) + ido * ((5) + cdim * (k))].i + cc[(0) + ido * ((6) + cdim * (k))].i; t7.r = cc[(0) + ido * ((5) + cdim * (k))].r - cc[(0) + ido * ((6) + cdim * (k))].r; t7.i = cc[(0) + ido * ((5) + cdim * (k))].i - cc[(0) + ido * ((6) + cdim * (k))].i;
-                        }
-                        ch[(0) + ido * ((k) + l1 * (0))].r = t1.r + t2.r + t3.r + t4.r + t5.r + t6.r; ch[(0) + ido * ((k) + l1 * (0))].i = t1.i + t2.i + t3.i + t4.i + t5.i + t6.i;
-                        {
-                            cmplx ca, cb; ca.r = t1.r + tw1r * t2.r + tw2r * t3.r + tw3r * t4.r + tw4r * t5.r + tw5r * t6.r; ca.i = t1.i + tw1r * t2.i + tw2r * t3.i + tw3r * t4.i + tw4r * t5.i + tw5r * t6.i; cb.i = +tw1i * t11.r + tw2i * t10.r + tw3i * t9.r + tw4i * t8.r + tw5i * t7.r; cb.r = -(+tw1i * t11.i + tw2i * t10.i + tw3i * t9.i + tw4i * t8.i + tw5i * t7.i);
-                            {
-                                ch[(0) + ido * ((k) + l1 * (1))].r = ca.r + cb.r; ch[(0) + ido * ((k) + l1 * (1))].i = ca.i + cb.i; ch[(0) + ido * ((k) + l1 * (10))].r = ca.r - cb.r; ch[(0) + ido * ((k) + l1 * (10))].i = ca.i - cb.i;
-                            }
-                        }
-                        {
-                            cmplx ca, cb; ca.r = t1.r + tw2r * t2.r + tw4r * t3.r + tw5r * t4.r + tw3r * t5.r + tw1r * t6.r; ca.i = t1.i + tw2r * t2.i + tw4r * t3.i + tw5r * t4.i + tw3r * t5.i + tw1r * t6.i; cb.i = +tw2i * t11.r + tw4i * t10.r - tw5i * t9.r - tw3i * t8.r - tw1i * t7.r; cb.r = -(+tw2i * t11.i + tw4i * t10.i - tw5i * t9.i - tw3i * t8.i - tw1i * t7.i);
-                            {
-                                ch[(0) + ido * ((k) + l1 * (2))].r = ca.r + cb.r; ch[(0) + ido * ((k) + l1 * (2))].i = ca.i + cb.i; ch[(0) + ido * ((k) + l1 * (9))].r = ca.r - cb.r; ch[(0) + ido * ((k) + l1 * (9))].i = ca.i - cb.i;
-                            }
-                        }
-                        {
-                            cmplx ca, cb; ca.r = t1.r + tw3r * t2.r + tw5r * t3.r + tw2r * t4.r + tw1r * t5.r + tw4r * t6.r; ca.i = t1.i + tw3r * t2.i + tw5r * t3.i + tw2r * t4.i + tw1r * t5.i + tw4r * t6.i; cb.i = +tw3i * t11.r - tw5i * t10.r - tw2i * t9.r + tw1i * t8.r + tw4i * t7.r; cb.r = -(+tw3i * t11.i - tw5i * t10.i - tw2i * t9.i + tw1i * t8.i + tw4i * t7.i);
-                            {
-                                ch[(0) + ido * ((k) + l1 * (3))].r = ca.r + cb.r; ch[(0) + ido * ((k) + l1 * (3))].i = ca.i + cb.i; ch[(0) + ido * ((k) + l1 * (8))].r = ca.r - cb.r; ch[(0) + ido * ((k) + l1 * (8))].i = ca.i - cb.i;
-                            }
-                        }
-                        {
-                            cmplx ca, cb; ca.r = t1.r + tw4r * t2.r + tw3r * t3.r + tw1r * t4.r + tw5r * t5.r + tw2r * t6.r; ca.i = t1.i + tw4r * t2.i + tw3r * t3.i + tw1r * t4.i + tw5r * t5.i + tw2r * t6.i; cb.i = +tw4i * t11.r - tw3i * t10.r + tw1i * t9.r + tw5i * t8.r - tw2i * t7.r; cb.r = -(+tw4i * t11.i - tw3i * t10.i + tw1i * t9.i + tw5i * t8.i - tw2i * t7.i);
-                            {
-                                ch[(0) + ido * ((k) + l1 * (4))].r = ca.r + cb.r; ch[(0) + ido * ((k) + l1 * (4))].i = ca.i + cb.i; ch[(0) + ido * ((k) + l1 * (7))].r = ca.r - cb.r; ch[(0) + ido * ((k) + l1 * (7))].i = ca.i - cb.i;
-                            }
-                        }
-                        {
-                            cmplx ca, cb; ca.r = t1.r + tw5r * t2.r + tw1r * t3.r + tw4r * t4.r + tw2r * t5.r + tw3r * t6.r; ca.i = t1.i + tw5r * t2.i + tw1r * t3.i + tw4r * t4.i + tw2r * t5.i + tw3r * t6.i; cb.i = +tw5i * t11.r - tw1i * t10.r + tw4i * t9.r - tw2i * t8.r + tw3i * t7.r; cb.r = -(+tw5i * t11.i - tw1i * t10.i + tw4i * t9.i - tw2i * t8.i + tw3i * t7.i);
-                            {
-                                ch[(0) + ido * ((k) + l1 * (5))].r = ca.r + cb.r; ch[(0) + ido * ((k) + l1 * (5))].i = ca.i + cb.i; ch[(0) + ido * ((k) + l1 * (6))].r = ca.r - cb.r; ch[(0) + ido * ((k) + l1 * (6))].i = ca.i - cb.i;
-                            }
-                        }
-                    }
+                    t1 = cc[(0) + ido * ((0) + cdim * (k))];
+                    t2.r = cc[(0) + ido * ((1) + cdim * (k))].r + cc[(0) + ido * ((10) + cdim * (k))].r;
+                    t2.i = cc[(0) + ido * ((1) + cdim * (k))].i + cc[(0) + ido * ((10) + cdim * (k))].i;
+                    t11.r = cc[(0) + ido * ((1) + cdim * (k))].r - cc[(0) + ido * ((10) + cdim * (k))].r;
+                    t11.i = cc[(0) + ido * ((1) + cdim * (k))].i - cc[(0) + ido * ((10) + cdim * (k))].i;
+                    t3.r = cc[(0) + ido * ((2) + cdim * (k))].r + cc[(0) + ido * ((9) + cdim * (k))].r;
+                    t3.i = cc[(0) + ido * ((2) + cdim * (k))].i + cc[(0) + ido * ((9) + cdim * (k))].i;
+                    t10.r = cc[(0) + ido * ((2) + cdim * (k))].r - cc[(0) + ido * ((9) + cdim * (k))].r;
+                    t10.i = cc[(0) + ido * ((2) + cdim * (k))].i - cc[(0) + ido * ((9) + cdim * (k))].i;
+                    t4.r = cc[(0) + ido * ((3) + cdim * (k))].r + cc[(0) + ido * ((8) + cdim * (k))].r;
+                    t4.i = cc[(0) + ido * ((3) + cdim * (k))].i + cc[(0) + ido * ((8) + cdim * (k))].i;
+                    t9.r = cc[(0) + ido * ((3) + cdim * (k))].r - cc[(0) + ido * ((8) + cdim * (k))].r;
+                    t9.i = cc[(0) + ido * ((3) + cdim * (k))].i - cc[(0) + ido * ((8) + cdim * (k))].i;
+                    t5.r = cc[(0) + ido * ((4) + cdim * (k))].r + cc[(0) + ido * ((7) + cdim * (k))].r;
+                    t5.i = cc[(0) + ido * ((4) + cdim * (k))].i + cc[(0) + ido * ((7) + cdim * (k))].i;
+                    t8.r = cc[(0) + ido * ((4) + cdim * (k))].r - cc[(0) + ido * ((7) + cdim * (k))].r;
+                    t8.i = cc[(0) + ido * ((4) + cdim * (k))].i - cc[(0) + ido * ((7) + cdim * (k))].i;
+                    t6.r = cc[(0) + ido * ((5) + cdim * (k))].r + cc[(0) + ido * ((6) + cdim * (k))].r;
+                    t6.i = cc[(0) + ido * ((5) + cdim * (k))].i + cc[(0) + ido * ((6) + cdim * (k))].i;
+                    t7.r = cc[(0) + ido * ((5) + cdim * (k))].r - cc[(0) + ido * ((6) + cdim * (k))].r;
+                    t7.i = cc[(0) + ido * ((5) + cdim * (k))].i - cc[(0) + ido * ((6) + cdim * (k))].i;
+                    ch[(0) + ido * ((k) + l1 * (0))].r = t1.r + t2.r + t3.r + t4.r + t5.r + t6.r;
+                    ch[(0) + ido * ((k) + l1 * (0))].i = t1.i + t2.i + t3.i + t4.i + t5.i + t6.i;
+                    ca.r = t1.r + tw1r * t2.r + tw2r * t3.r + tw3r * t4.r + tw4r * t5.r + tw5r * t6.r;
+                    ca.i = t1.i + tw1r * t2.i + tw2r * t3.i + tw3r * t4.i + tw4r * t5.i + tw5r * t6.i;
+                    cb.i = +tw1i * t11.r + tw2i * t10.r + tw3i * t9.r + tw4i * t8.r + tw5i * t7.r;
+                    cb.r = -(+tw1i * t11.i + tw2i * t10.i + tw3i * t9.i + tw4i * t8.i + tw5i * t7.i);
+
+                    ch[(0) + ido * ((k) + l1 * (1))].r = ca.r + cb.r;
+                    ch[(0) + ido * ((k) + l1 * (1))].i = ca.i + cb.i;
+                    ch[(0) + ido * ((k) + l1 * (10))].r = ca.r - cb.r;
+                    ch[(0) + ido * ((k) + l1 * (10))].i = ca.i - cb.i;
+
+                    ca.r = t1.r + tw2r * t2.r + tw4r * t3.r + tw5r * t4.r + tw3r * t5.r + tw1r * t6.r;
+                    ca.i = t1.i + tw2r * t2.i + tw4r * t3.i + tw5r * t4.i + tw3r * t5.i + tw1r * t6.i;
+                    cb.i = +tw2i * t11.r + tw4i * t10.r - tw5i * t9.r - tw3i * t8.r - tw1i * t7.r;
+                    cb.r = -(+tw2i * t11.i + tw4i * t10.i - tw5i * t9.i - tw3i * t8.i - tw1i * t7.i);
+
+                    ch[(0) + ido * ((k) + l1 * (2))].r = ca.r + cb.r;
+                    ch[(0) + ido * ((k) + l1 * (2))].i = ca.i + cb.i;
+                    ch[(0) + ido * ((k) + l1 * (9))].r = ca.r - cb.r;
+                    ch[(0) + ido * ((k) + l1 * (9))].i = ca.i - cb.i;
+
+                    ca.r = t1.r + tw3r * t2.r + tw5r * t3.r + tw2r * t4.r + tw1r * t5.r + tw4r * t6.r;
+                    ca.i = t1.i + tw3r * t2.i + tw5r * t3.i + tw2r * t4.i + tw1r * t5.i + tw4r * t6.i;
+                    cb.i = +tw3i * t11.r - tw5i * t10.r - tw2i * t9.r + tw1i * t8.r + tw4i * t7.r;
+                    cb.r = -(+tw3i * t11.i - tw5i * t10.i - tw2i * t9.i + tw1i * t8.i + tw4i * t7.i);
+
+                    ch[(0) + ido * ((k) + l1 * (3))].r = ca.r + cb.r;
+                    ch[(0) + ido * ((k) + l1 * (3))].i = ca.i + cb.i;
+                    ch[(0) + ido * ((k) + l1 * (8))].r = ca.r - cb.r;
+                    ch[(0) + ido * ((k) + l1 * (8))].i = ca.i - cb.i;
+
+                    ca.r = t1.r + tw4r * t2.r + tw3r * t3.r + tw1r * t4.r + tw5r * t5.r + tw2r * t6.r;
+                    ca.i = t1.i + tw4r * t2.i + tw3r * t3.i + tw1r * t4.i + tw5r * t5.i + tw2r * t6.i;
+                    cb.i = +tw4i * t11.r - tw3i * t10.r + tw1i * t9.r + tw5i * t8.r - tw2i * t7.r;
+                    cb.r = -(+tw4i * t11.i - tw3i * t10.i + tw1i * t9.i + tw5i * t8.i - tw2i * t7.i);
+
+                    ch[(0) + ido * ((k) + l1 * (4))].r = ca.r + cb.r;
+                    ch[(0) + ido * ((k) + l1 * (4))].i = ca.i + cb.i;
+                    ch[(0) + ido * ((k) + l1 * (7))].r = ca.r - cb.r;
+                    ch[(0) + ido * ((k) + l1 * (7))].i = ca.i - cb.i;
+
+                    ca.r = t1.r + tw5r * t2.r + tw1r * t3.r + tw4r * t4.r + tw2r * t5.r + tw3r * t6.r;
+                    ca.i = t1.i + tw5r * t2.i + tw1r * t3.i + tw4r * t4.i + tw2r * t5.i + tw3r * t6.i;
+                    cb.i = +tw5i * t11.r - tw1i * t10.r + tw4i * t9.r - tw2i * t8.r + tw3i * t7.r;
+                    cb.r = -(+tw5i * t11.i - tw1i * t10.i + tw4i * t9.i - tw2i * t8.i + tw3i * t7.i);
+
+                    ch[(0) + ido * ((k) + l1 * (5))].r = ca.r + cb.r;
+                    ch[(0) + ido * ((k) + l1 * (5))].i = ca.i + cb.i;
+                    ch[(0) + ido * ((k) + l1 * (6))].r = ca.r - cb.r;
+                    ch[(0) + ido * ((k) + l1 * (6))].i = ca.i - cb.i;
+
                     for (int i = 1; i < ido; ++i)
                     {
-                        cmplx t1 = cc[(i) + ido * ((0) + cdim * (k))], t2, t3, t4, t5, t6, t7, t8, t9, t10, t11;
-                        {
-                            t2.r = cc[(i) + ido * ((1) + cdim * (k))].r + cc[(i) + ido * ((10) + cdim * (k))].r; t2.i = cc[(i) + ido * ((1) + cdim * (k))].i + cc[(i) + ido * ((10) + cdim * (k))].i; t11.r = cc[(i) + ido * ((1) + cdim * (k))].r - cc[(i) + ido * ((10) + cdim * (k))].r; t11.i = cc[(i) + ido * ((1) + cdim * (k))].i - cc[(i) + ido * ((10) + cdim * (k))].i;
-                        }
-                        {
-                            t3.r = cc[(i) + ido * ((2) + cdim * (k))].r + cc[(i) + ido * ((9) + cdim * (k))].r; t3.i = cc[(i) + ido * ((2) + cdim * (k))].i + cc[(i) + ido * ((9) + cdim * (k))].i; t10.r = cc[(i) + ido * ((2) + cdim * (k))].r - cc[(i) + ido * ((9) + cdim * (k))].r; t10.i = cc[(i) + ido * ((2) + cdim * (k))].i - cc[(i) + ido * ((9) + cdim * (k))].i;
-                        }
-                        {
-                            t4.r = cc[(i) + ido * ((3) + cdim * (k))].r + cc[(i) + ido * ((8) + cdim * (k))].r; t4.i = cc[(i) + ido * ((3) + cdim * (k))].i + cc[(i) + ido * ((8) + cdim * (k))].i; t9.r = cc[(i) + ido * ((3) + cdim * (k))].r - cc[(i) + ido * ((8) + cdim * (k))].r; t9.i = cc[(i) + ido * ((3) + cdim * (k))].i - cc[(i) + ido * ((8) + cdim * (k))].i;
-                        }
-                        {
-                            t5.r = cc[(i) + ido * ((4) + cdim * (k))].r + cc[(i) + ido * ((7) + cdim * (k))].r; t5.i = cc[(i) + ido * ((4) + cdim * (k))].i + cc[(i) + ido * ((7) + cdim * (k))].i; t8.r = cc[(i) + ido * ((4) + cdim * (k))].r - cc[(i) + ido * ((7) + cdim * (k))].r; t8.i = cc[(i) + ido * ((4) + cdim * (k))].i - cc[(i) + ido * ((7) + cdim * (k))].i;
-                        }
-                        {
-                            t6.r = cc[(i) + ido * ((5) + cdim * (k))].r + cc[(i) + ido * ((6) + cdim * (k))].r; t6.i = cc[(i) + ido * ((5) + cdim * (k))].i + cc[(i) + ido * ((6) + cdim * (k))].i; t7.r = cc[(i) + ido * ((5) + cdim * (k))].r - cc[(i) + ido * ((6) + cdim * (k))].r; t7.i = cc[(i) + ido * ((5) + cdim * (k))].i - cc[(i) + ido * ((6) + cdim * (k))].i;
-                        }
-                        ch[(i) + ido * ((k) + l1 * (0))].r = t1.r + t2.r + t3.r + t4.r + t5.r + t6.r; ch[(i) + ido * ((k) + l1 * (0))].i = t1.i + t2.i + t3.i + t4.i + t5.i + t6.i;
-                        {
-                            cmplx da, db;
-                            {
-                                cmplx ca, cb; ca.r = t1.r + tw1r * t2.r + tw2r * t3.r + tw3r * t4.r + tw4r * t5.r + tw5r * t6.r; ca.i = t1.i + tw1r * t2.i + tw2r * t3.i + tw3r * t4.i + tw4r * t5.i + tw5r * t6.i; cb.i = +tw1i * t11.r + tw2i * t10.r + tw3i * t9.r + tw4i * t8.r + tw5i * t7.r; cb.r = -(+tw1i * t11.i + tw2i * t10.i + tw3i * t9.i + tw4i * t8.i + tw5i * t7.i);
-                                {
-                                    da.r = ca.r + cb.r; da.i = ca.i + cb.i; db.r = ca.r - cb.r; db.i = ca.i - cb.i;
-                                }
-                            }
-                            {
-                                ch[(i) + ido * ((k) + l1 * (1))].r = wa[(i) - 1 + (1 - 1) * (ido - 1)].r * da.r - sign * wa[(i) - 1 + (1 - 1) * (ido - 1)].i * da.i; ch[(i) + ido * ((k) + l1 * (1))].i = wa[(i) - 1 + (1 - 1) * (ido - 1)].r * da.i + sign * wa[(i) - 1 + (1 - 1) * (ido - 1)].i * da.r;
-                            }
-                            {
-                                ch[(i) + ido * ((k) + l1 * (10))].r = wa[(i) - 1 + (10 - 1) * (ido - 1)].r * db.r - sign * wa[(i) - 1 + (10 - 1) * (ido - 1)].i * db.i; ch[(i) + ido * ((k) + l1 * (10))].i = wa[(i) - 1 + (10 - 1) * (ido - 1)].r * db.i + sign * wa[(i) - 1 + (10 - 1) * (ido - 1)].i * db.r;
-                            }
-                        }
-                        {
-                            cmplx da, db;
-                            {
-                                cmplx ca, cb; ca.r = t1.r + tw2r * t2.r + tw4r * t3.r + tw5r * t4.r + tw3r * t5.r + tw1r * t6.r; ca.i = t1.i + tw2r * t2.i + tw4r * t3.i + tw5r * t4.i + tw3r * t5.i + tw1r * t6.i; cb.i = +tw2i * t11.r + tw4i * t10.r - tw5i * t9.r - tw3i * t8.r - tw1i * t7.r; cb.r = -(+tw2i * t11.i + tw4i * t10.i - tw5i * t9.i - tw3i * t8.i - tw1i * t7.i);
-                                {
-                                    da.r = ca.r + cb.r; da.i = ca.i + cb.i; db.r = ca.r - cb.r; db.i = ca.i - cb.i;
-                                }
-                            }
-                            {
-                                ch[(i) + ido * ((k) + l1 * (2))].r = wa[(i) - 1 + (2 - 1) * (ido - 1)].r * da.r - sign * wa[(i) - 1 + (2 - 1) * (ido - 1)].i * da.i; ch[(i) + ido * ((k) + l1 * (2))].i = wa[(i) - 1 + (2 - 1) * (ido - 1)].r * da.i + sign * wa[(i) - 1 + (2 - 1) * (ido - 1)].i * da.r;
-                            }
-                            {
-                                ch[(i) + ido * ((k) + l1 * (9))].r = wa[(i) - 1 + (9 - 1) * (ido - 1)].r * db.r - sign * wa[(i) - 1 + (9 - 1) * (ido - 1)].i * db.i; ch[(i) + ido * ((k) + l1 * (9))].i = wa[(i) - 1 + (9 - 1) * (ido - 1)].r * db.i + sign * wa[(i) - 1 + (9 - 1) * (ido - 1)].i * db.r;
-                            }
-                        }
-                        {
-                            cmplx da, db;
-                            {
-                                cmplx ca, cb; ca.r = t1.r + tw3r * t2.r + tw5r * t3.r + tw2r * t4.r + tw1r * t5.r + tw4r * t6.r; ca.i = t1.i + tw3r * t2.i + tw5r * t3.i + tw2r * t4.i + tw1r * t5.i + tw4r * t6.i; cb.i = +tw3i * t11.r - tw5i * t10.r - tw2i * t9.r + tw1i * t8.r + tw4i * t7.r; cb.r = -(+tw3i * t11.i - tw5i * t10.i - tw2i * t9.i + tw1i * t8.i + tw4i * t7.i);
-                                {
-                                    da.r = ca.r + cb.r; da.i = ca.i + cb.i; db.r = ca.r - cb.r; db.i = ca.i - cb.i;
-                                }
-                            }
-                            {
-                                ch[(i) + ido * ((k) + l1 * (3))].r = wa[(i) - 1 + (3 - 1) * (ido - 1)].r * da.r - sign * wa[(i) - 1 + (3 - 1) * (ido - 1)].i * da.i; ch[(i) + ido * ((k) + l1 * (3))].i = wa[(i) - 1 + (3 - 1) * (ido - 1)].r * da.i + sign * wa[(i) - 1 + (3 - 1) * (ido - 1)].i * da.r;
-                            }
-                            {
-                                ch[(i) + ido * ((k) + l1 * (8))].r = wa[(i) - 1 + (8 - 1) * (ido - 1)].r * db.r - sign * wa[(i) - 1 + (8 - 1) * (ido - 1)].i * db.i; ch[(i) + ido * ((k) + l1 * (8))].i = wa[(i) - 1 + (8 - 1) * (ido - 1)].r * db.i + sign * wa[(i) - 1 + (8 - 1) * (ido - 1)].i * db.r;
-                            }
-                        }
-                        {
-                            cmplx da, db;
-                            {
-                                cmplx ca, cb; ca.r = t1.r + tw4r * t2.r + tw3r * t3.r + tw1r * t4.r + tw5r * t5.r + tw2r * t6.r; ca.i = t1.i + tw4r * t2.i + tw3r * t3.i + tw1r * t4.i + tw5r * t5.i + tw2r * t6.i; cb.i = +tw4i * t11.r - tw3i * t10.r + tw1i * t9.r + tw5i * t8.r - tw2i * t7.r; cb.r = -(+tw4i * t11.i - tw3i * t10.i + tw1i * t9.i + tw5i * t8.i - tw2i * t7.i);
-                                {
-                                    da.r = ca.r + cb.r; da.i = ca.i + cb.i; db.r = ca.r - cb.r; db.i = ca.i - cb.i;
-                                }
-                            }
-                            {
-                                ch[(i) + ido * ((k) + l1 * (4))].r = wa[(i) - 1 + (4 - 1) * (ido - 1)].r * da.r - sign * wa[(i) - 1 + (4 - 1) * (ido - 1)].i * da.i; ch[(i) + ido * ((k) + l1 * (4))].i = wa[(i) - 1 + (4 - 1) * (ido - 1)].r * da.i + sign * wa[(i) - 1 + (4 - 1) * (ido - 1)].i * da.r;
-                            }
-                            {
-                                ch[(i) + ido * ((k) + l1 * (7))].r = wa[(i) - 1 + (7 - 1) * (ido - 1)].r * db.r - sign * wa[(i) - 1 + (7 - 1) * (ido - 1)].i * db.i; ch[(i) + ido * ((k) + l1 * (7))].i = wa[(i) - 1 + (7 - 1) * (ido - 1)].r * db.i + sign * wa[(i) - 1 + (7 - 1) * (ido - 1)].i * db.r;
-                            }
-                        }
-                        {
-                            cmplx da, db;
-                            {
-                                cmplx ca, cb; ca.r = t1.r + tw5r * t2.r + tw1r * t3.r + tw4r * t4.r + tw2r * t5.r + tw3r * t6.r; ca.i = t1.i + tw5r * t2.i + tw1r * t3.i + tw4r * t4.i + tw2r * t5.i + tw3r * t6.i; cb.i = +tw5i * t11.r - tw1i * t10.r + tw4i * t9.r - tw2i * t8.r + tw3i * t7.r; cb.r = -(+tw5i * t11.i - tw1i * t10.i + tw4i * t9.i - tw2i * t8.i + tw3i * t7.i);
-                                {
-                                    da.r = ca.r + cb.r; da.i = ca.i + cb.i; db.r = ca.r - cb.r; db.i = ca.i - cb.i;
-                                }
-                            }
-                            {
-                                ch[(i) + ido * ((k) + l1 * (5))].r = wa[(i) - 1 + (5 - 1) * (ido - 1)].r * da.r - sign * wa[(i) - 1 + (5 - 1) * (ido - 1)].i * da.i; ch[(i) + ido * ((k) + l1 * (5))].i = wa[(i) - 1 + (5 - 1) * (ido - 1)].r * da.i + sign * wa[(i) - 1 + (5 - 1) * (ido - 1)].i * da.r;
-                            }
-                            {
-                                ch[(i) + ido * ((k) + l1 * (6))].r = wa[(i) - 1 + (6 - 1) * (ido - 1)].r * db.r - sign * wa[(i) - 1 + (6 - 1) * (ido - 1)].i * db.i; ch[(i) + ido * ((k) + l1 * (6))].i = wa[(i) - 1 + (6 - 1) * (ido - 1)].r * db.i + sign * wa[(i) - 1 + (6 - 1) * (ido - 1)].i * db.r;
-                            }
-                        }
+                        t1 = cc[(i) + ido * ((0) + cdim * (k))];
+
+                        t2.r = cc[(i) + ido * ((1) + cdim * (k))].r + cc[(i) + ido * ((10) + cdim * (k))].r;
+                        t2.i = cc[(i) + ido * ((1) + cdim * (k))].i + cc[(i) + ido * ((10) + cdim * (k))].i;
+                        t11.r = cc[(i) + ido * ((1) + cdim * (k))].r - cc[(i) + ido * ((10) + cdim * (k))].r;
+                        t11.i = cc[(i) + ido * ((1) + cdim * (k))].i - cc[(i) + ido * ((10) + cdim * (k))].i;
+
+                        t3.r = cc[(i) + ido * ((2) + cdim * (k))].r + cc[(i) + ido * ((9) + cdim * (k))].r;
+                        t3.i = cc[(i) + ido * ((2) + cdim * (k))].i + cc[(i) + ido * ((9) + cdim * (k))].i;
+                        t10.r = cc[(i) + ido * ((2) + cdim * (k))].r - cc[(i) + ido * ((9) + cdim * (k))].r;
+                        t10.i = cc[(i) + ido * ((2) + cdim * (k))].i - cc[(i) + ido * ((9) + cdim * (k))].i;
+
+                        t4.r = cc[(i) + ido * ((3) + cdim * (k))].r + cc[(i) + ido * ((8) + cdim * (k))].r;
+                        t4.i = cc[(i) + ido * ((3) + cdim * (k))].i + cc[(i) + ido * ((8) + cdim * (k))].i;
+                        t9.r = cc[(i) + ido * ((3) + cdim * (k))].r - cc[(i) + ido * ((8) + cdim * (k))].r;
+                        t9.i = cc[(i) + ido * ((3) + cdim * (k))].i - cc[(i) + ido * ((8) + cdim * (k))].i;
+
+                        t5.r = cc[(i) + ido * ((4) + cdim * (k))].r + cc[(i) + ido * ((7) + cdim * (k))].r;
+                        t5.i = cc[(i) + ido * ((4) + cdim * (k))].i + cc[(i) + ido * ((7) + cdim * (k))].i;
+                        t8.r = cc[(i) + ido * ((4) + cdim * (k))].r - cc[(i) + ido * ((7) + cdim * (k))].r;
+                        t8.i = cc[(i) + ido * ((4) + cdim * (k))].i - cc[(i) + ido * ((7) + cdim * (k))].i;
+
+                        t6.r = cc[(i) + ido * ((5) + cdim * (k))].r + cc[(i) + ido * ((6) + cdim * (k))].r;
+                        t6.i = cc[(i) + ido * ((5) + cdim * (k))].i + cc[(i) + ido * ((6) + cdim * (k))].i;
+                        t7.r = cc[(i) + ido * ((5) + cdim * (k))].r - cc[(i) + ido * ((6) + cdim * (k))].r;
+                        t7.i = cc[(i) + ido * ((5) + cdim * (k))].i - cc[(i) + ido * ((6) + cdim * (k))].i;
+
+                        ch[(i) + ido * ((k) + l1 * (0))].r = t1.r + t2.r + t3.r + t4.r + t5.r + t6.r;
+                        ch[(i) + ido * ((k) + l1 * (0))].i = t1.i + t2.i + t3.i + t4.i + t5.i + t6.i;
+
+                        ca.r = t1.r + tw1r * t2.r + tw2r * t3.r + tw3r * t4.r + tw4r * t5.r + tw5r * t6.r;
+                        ca.i = t1.i + tw1r * t2.i + tw2r * t3.i + tw3r * t4.i + tw4r * t5.i + tw5r * t6.i;
+                        cb.i = +tw1i * t11.r + tw2i * t10.r + tw3i * t9.r + tw4i * t8.r + tw5i * t7.r;
+                        cb.r = -(+tw1i * t11.i + tw2i * t10.i + tw3i * t9.i + tw4i * t8.i + tw5i * t7.i);
+
+                        da.r = ca.r + cb.r;
+                        da.i = ca.i + cb.i;
+                        db.r = ca.r - cb.r;
+                        db.i = ca.i - cb.i;
+
+                        ch[(i) + ido * ((k) + l1 * (1))].r = wa[(i) - 1 + (1 - 1) * (ido - 1)].r * da.r - sign * wa[(i) - 1 + (1 - 1) * (ido - 1)].i * da.i;
+                        ch[(i) + ido * ((k) + l1 * (1))].i = wa[(i) - 1 + (1 - 1) * (ido - 1)].r * da.i + sign * wa[(i) - 1 + (1 - 1) * (ido - 1)].i * da.r;
+
+                        ch[(i) + ido * ((k) + l1 * (10))].r = wa[(i) - 1 + (10 - 1) * (ido - 1)].r * db.r - sign * wa[(i) - 1 + (10 - 1) * (ido - 1)].i * db.i;
+                        ch[(i) + ido * ((k) + l1 * (10))].i = wa[(i) - 1 + (10 - 1) * (ido - 1)].r * db.i + sign * wa[(i) - 1 + (10 - 1) * (ido - 1)].i * db.r;
+
+                        ca.r = t1.r + tw2r * t2.r + tw4r * t3.r + tw5r * t4.r + tw3r * t5.r + tw1r * t6.r;
+                        ca.i = t1.i + tw2r * t2.i + tw4r * t3.i + tw5r * t4.i + tw3r * t5.i + tw1r * t6.i;
+                        cb.i = +tw2i * t11.r + tw4i * t10.r - tw5i * t9.r - tw3i * t8.r - tw1i * t7.r;
+                        cb.r = -(+tw2i * t11.i + tw4i * t10.i - tw5i * t9.i - tw3i * t8.i - tw1i * t7.i);
+
+                        da.r = ca.r + cb.r;
+                        da.i = ca.i + cb.i;
+                        db.r = ca.r - cb.r;
+                        db.i = ca.i - cb.i;
+
+                        ch[(i) + ido * ((k) + l1 * (2))].r = wa[(i) - 1 + (2 - 1) * (ido - 1)].r * da.r - sign * wa[(i) - 1 + (2 - 1) * (ido - 1)].i * da.i;
+                        ch[(i) + ido * ((k) + l1 * (2))].i = wa[(i) - 1 + (2 - 1) * (ido - 1)].r * da.i + sign * wa[(i) - 1 + (2 - 1) * (ido - 1)].i * da.r;
+
+                        ch[(i) + ido * ((k) + l1 * (9))].r = wa[(i) - 1 + (9 - 1) * (ido - 1)].r * db.r - sign * wa[(i) - 1 + (9 - 1) * (ido - 1)].i * db.i;
+                        ch[(i) + ido * ((k) + l1 * (9))].i = wa[(i) - 1 + (9 - 1) * (ido - 1)].r * db.i + sign * wa[(i) - 1 + (9 - 1) * (ido - 1)].i * db.r;
+
+                        ca.r = t1.r + tw3r * t2.r + tw5r * t3.r + tw2r * t4.r + tw1r * t5.r + tw4r * t6.r;
+                        ca.i = t1.i + tw3r * t2.i + tw5r * t3.i + tw2r * t4.i + tw1r * t5.i + tw4r * t6.i;
+                        cb.i = +tw3i * t11.r - tw5i * t10.r - tw2i * t9.r + tw1i * t8.r + tw4i * t7.r;
+                        cb.r = -(+tw3i * t11.i - tw5i * t10.i - tw2i * t9.i + tw1i * t8.i + tw4i * t7.i);
+
+                        da.r = ca.r + cb.r;
+                        da.i = ca.i + cb.i;
+                        db.r = ca.r - cb.r;
+                        db.i = ca.i - cb.i;
+
+                        ch[(i) + ido * ((k) + l1 * (3))].r = wa[(i) - 1 + (3 - 1) * (ido - 1)].r * da.r - sign * wa[(i) - 1 + (3 - 1) * (ido - 1)].i * da.i;
+                        ch[(i) + ido * ((k) + l1 * (3))].i = wa[(i) - 1 + (3 - 1) * (ido - 1)].r * da.i + sign * wa[(i) - 1 + (3 - 1) * (ido - 1)].i * da.r;
+
+                        ch[(i) + ido * ((k) + l1 * (8))].r = wa[(i) - 1 + (8 - 1) * (ido - 1)].r * db.r - sign * wa[(i) - 1 + (8 - 1) * (ido - 1)].i * db.i;
+                        ch[(i) + ido * ((k) + l1 * (8))].i = wa[(i) - 1 + (8 - 1) * (ido - 1)].r * db.i + sign * wa[(i) - 1 + (8 - 1) * (ido - 1)].i * db.r;
+
+                        ca.r = t1.r + tw4r * t2.r + tw3r * t3.r + tw1r * t4.r + tw5r * t5.r + tw2r * t6.r;
+                        ca.i = t1.i + tw4r * t2.i + tw3r * t3.i + tw1r * t4.i + tw5r * t5.i + tw2r * t6.i;
+                        cb.i = +tw4i * t11.r - tw3i * t10.r + tw1i * t9.r + tw5i * t8.r - tw2i * t7.r;
+                        cb.r = -(+tw4i * t11.i - tw3i * t10.i + tw1i * t9.i + tw5i * t8.i - tw2i * t7.i);
+
+                        da.r = ca.r + cb.r;
+                        da.i = ca.i + cb.i;
+                        db.r = ca.r - cb.r;
+                        db.i = ca.i - cb.i;
+
+                        ch[(i) + ido * ((k) + l1 * (4))].r = wa[(i) - 1 + (4 - 1) * (ido - 1)].r * da.r - sign * wa[(i) - 1 + (4 - 1) * (ido - 1)].i * da.i;
+                        ch[(i) + ido * ((k) + l1 * (4))].i = wa[(i) - 1 + (4 - 1) * (ido - 1)].r * da.i + sign * wa[(i) - 1 + (4 - 1) * (ido - 1)].i * da.r;
+
+                        ch[(i) + ido * ((k) + l1 * (7))].r = wa[(i) - 1 + (7 - 1) * (ido - 1)].r * db.r - sign * wa[(i) - 1 + (7 - 1) * (ido - 1)].i * db.i;
+                        ch[(i) + ido * ((k) + l1 * (7))].i = wa[(i) - 1 + (7 - 1) * (ido - 1)].r * db.i + sign * wa[(i) - 1 + (7 - 1) * (ido - 1)].i * db.r;
+
+                        ca.r = t1.r + tw5r * t2.r + tw1r * t3.r + tw4r * t4.r + tw2r * t5.r + tw3r * t6.r;
+                        ca.i = t1.i + tw5r * t2.i + tw1r * t3.i + tw4r * t4.i + tw2r * t5.i + tw3r * t6.i;
+                        cb.i = +tw5i * t11.r - tw1i * t10.r + tw4i * t9.r - tw2i * t8.r + tw3i * t7.r;
+                        cb.r = -(+tw5i * t11.i - tw1i * t10.i + tw4i * t9.i - tw2i * t8.i + tw3i * t7.i);
+
+                        da.r = ca.r + cb.r;
+                        da.i = ca.i + cb.i;
+                        db.r = ca.r - cb.r;
+                        db.i = ca.i - cb.i;
+
+                        ch[(i) + ido * ((k) + l1 * (5))].r = wa[(i) - 1 + (5 - 1) * (ido - 1)].r * da.r - sign * wa[(i) - 1 + (5 - 1) * (ido - 1)].i * da.i;
+                        ch[(i) + ido * ((k) + l1 * (5))].i = wa[(i) - 1 + (5 - 1) * (ido - 1)].r * da.i + sign * wa[(i) - 1 + (5 - 1) * (ido - 1)].i * da.r;
+
+                        ch[(i) + ido * ((k) + l1 * (6))].r = wa[(i) - 1 + (6 - 1) * (ido - 1)].r * db.r - sign * wa[(i) - 1 + (6 - 1) * (ido - 1)].i * db.i;
+                        ch[(i) + ido * ((k) + l1 * (6))].i = wa[(i) - 1 + (6 - 1) * (ido - 1)].r * db.i + sign * wa[(i) - 1 + (6 - 1) * (ido - 1)].i * db.r;
                     }
                 }
+            }
         }
 
-        static void passg(int ido, int ip, int l1, Span<cmplx> cc, Span<cmplx> ch, Span<cmplx> wa, Span<cmplx> csarr, int sign)
+        private static void passg(int ido, int ip, int l1, Span<cmplx> cc, Span<cmplx> ch, Span<cmplx> wa, Span<cmplx> csarr, int sign)
         {
             int cdim = ip;
             int ipph = (ip + 1) / 2;

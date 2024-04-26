@@ -2,10 +2,6 @@
 {
     using System;
 
-    // https://gitlab.mpcdf.mpg.de/mtr/pocketfft
-
-    // compare also https://www.shoup.net/PGFFT/
-    // https://bitbucket.org/jpommier/pffft/src/master/
     public static class FFTPlanFactory
     {
         public static IComplex1DFFTPlanFloat32 Create1DComplexFFTPlanFloat32(int length)

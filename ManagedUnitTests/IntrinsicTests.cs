@@ -26,5 +26,47 @@ namespace ManagedUnitTests
             Assert.IsFalse(Intrinsics.SpanRefEquals(Span<byte>.Empty, b));
             Assert.IsTrue(Intrinsics.SpanRefEquals(Span<byte>.Empty, Span<byte>.Empty));
         }
+
+        [TestMethod]
+        public void TestCastSingleToDouble()
+        {
+            for (int length = 0; length < 1000; length++)
+            {
+                float[] input = new float[length];
+                double[] output = new double[length];
+                for (int c = 0; c < length; c++)
+                {
+                    input[c] = Random.Shared.NextSingle();
+                }
+
+                Intrinsics.CastSingleToDouble(input.AsSpan(), output.AsSpan());
+
+                for (int c = 0; c < length; c++)
+                {
+                    Assert.AreEqual(input[c], (float)output[c], 0.00001f);
+                }
+            }
+        }
+
+        [TestMethod]
+        public void TestCastDoubleToSingle()
+        {
+            for (int length = 0; length < 1000; length++)
+            {
+                double[] input = new double[length];
+                float[] output = new float[length];
+                for (int c = 0; c < length; c++)
+                {
+                    input[c] = Random.Shared.NextDouble();
+                }
+
+                Intrinsics.CastDoubleToSingle(input.AsSpan(), output.AsSpan());
+
+                for (int c = 0; c < length; c++)
+                {
+                    Assert.AreEqual(input[c], (double)output[c], 0.00001f);
+                }
+            }
+        }
     }
 }

@@ -150,6 +150,16 @@ namespace PocketFFT
 
         internal static void CastDoubleToSingle(Span<double> input, Span<float> output)
         {
+            if (input.Length == 0)
+            {
+                return;
+            }
+
+            if (output.Length < input.Length)
+            {
+                throw new IndexOutOfRangeException("Output is not large enough for input");
+            }
+
             int idx = 0;
             int endIdx = input.Length;
 #if NET6_0_OR_GREATER
@@ -174,6 +184,16 @@ namespace PocketFFT
 
         internal static void CastSingleToDouble(Span<float> input, Span<double> output)
         {
+            if (input.Length == 0)
+            {
+                return;
+            }
+
+            if (output.Length < input.Length)
+            {
+                throw new IndexOutOfRangeException("Output is not large enough for input");
+            }
+
             int idx = 0;
             int endIdx = input.Length;
 #if NET6_0_OR_GREATER

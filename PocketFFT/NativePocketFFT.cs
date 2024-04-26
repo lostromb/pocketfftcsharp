@@ -9,6 +9,12 @@ using System.Text;
 
 namespace PocketFFT
 {
+
+    // https://gitlab.mpcdf.mpg.de/mtr/pocketfft
+
+    // compare also https://www.shoup.net/PGFFT/
+    // https://bitbucket.org/jpommier/pffft/src/master/
+
     internal unsafe static class NativePocketFFT
     {
         private const string DLL_NAME = "libpocketfft";

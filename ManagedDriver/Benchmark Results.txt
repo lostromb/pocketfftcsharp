@@ -91,4 +91,16 @@ final
 | Real    | 5980            | 177,209.5 ns | 987.36 ns | 875.27 ns |         - |
 | Complex | 5980            | 282,354.1 ns | 793.72 ns | 703.62 ns |         - |
 
-opt rad2
+better scale + copy
+| Method  | TransformLength | Mean         | Error     | StdDev    | Allocated |
+|-------- |---------------- |-------------:|----------:|----------:|----------:|
+| Real    | 64              |     426.0 ns |   2.58 ns |   2.29 ns |         - |
+| Complex | 64              |     593.2 ns |   4.51 ns |   4.22 ns |         - |
+| Real    | 191             |  12,812.9 ns |  52.00 ns |  48.64 ns |         - |
+| Complex | 191             |  12,346.9 ns |  99.68 ns |  83.24 ns |         - |
+| Real    | 1000            |  10,040.2 ns |  48.15 ns |  45.04 ns |         - |
+| Complex | 1000            |  15,940.2 ns |  49.73 ns |  44.09 ns |         - |
+| Real    | 2310            |  54,869.9 ns | 266.88 ns | 249.64 ns |         - |
+| Complex | 2310            |  48,775.2 ns | 359.82 ns | 318.97 ns |         - |
+| Real    | 5980            | 178,638.7 ns | 998.39 ns | 833.70 ns |         - |
+| Complex | 5980            | 287,184.8 ns | 955.98 ns | 798.28 ns |         - |

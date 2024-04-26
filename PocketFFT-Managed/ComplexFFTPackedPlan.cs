@@ -303,11 +303,7 @@ namespace PocketFFT
             {
                 if (fct != 1.0)
                 {
-                    for (int i = 0; i < len; ++i)
-                    {
-                        c[i].r = ch[i].r * fct;
-                        c[i].i = ch[i].i * fct;
-                    }
+                    Intrinsics.ScaleSpan(ch.Slice(0, len), c.Slice(0, len), fct);
                 }
                 else
                 {
@@ -318,32 +314,7 @@ namespace PocketFFT
             {
                 if (fct != 1.0)
                 {
-#if NET8_0_OR_GREATER
-                    Span<double> cmplxComponents = MemoryMarshal.Cast<cmplx, double>(c);
-                    int idx = 0;
-                    int endIdx = len * 2;
-                    if (Vector.IsHardwareAccelerated)
-                    {
-                        int vectorEndIdx = endIdx - ((len * 2) % Vector<double>.Count);
-                        while (idx < vectorEndIdx)
-                        {
-                            Span<double> slice = cmplxComponents.Slice(idx, Vector<double>.Count);
-                            Vector.Multiply(new Vector<double>(slice), fct).CopyTo(slice);
-                            idx += Vector<double>.Count;
-                        }
-                    }
-
-                    while (idx < endIdx)
-                    {
-                        cmplxComponents[idx++] *= fct;
-                    }
-#else
-                    for (int i = 0; i < len; ++i)
-                    {
-                        c[i].r *= fct;
-                        c[i].i *= fct;
-                    }
-#endif
+                    Intrinsics.ScaleSpanInPlace(c.Slice(0, len), fct);
                 }
             }
 

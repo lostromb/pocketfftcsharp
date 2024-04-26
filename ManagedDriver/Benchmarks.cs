@@ -50,11 +50,11 @@ namespace Driver
             _real.Backward(_realInput.AsSpan(), 3.0);
         }
 
-        //[Benchmark]
-        //public void Complex()
-        //{
-        //    _complex.Forward(_complexInput.AsSpan(), 3.0);
-        //    _complex.Backward(_complexInput.AsSpan(), 3.0);
-        //}
+        [Benchmark]
+        public void Complex()
+        {
+            _complex.Forward(_complexInput.AsSpan(), 3.0);
+            _complex.Backward(_complexInput.AsSpan(), 3.0);
+        }
     }
 }

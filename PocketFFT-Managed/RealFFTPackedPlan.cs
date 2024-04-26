@@ -273,45 +273,18 @@ namespace PocketFFT
             {
                 if (fct != 1.0)
                 {
-                    for (int i = 0; i < n; ++i)
-                    {
-                        c[i] = fct * p1[i];
-                    }
+                    Intrinsics.ScaleSpan(p1.Slice(0, n), c.Slice(0, n), fct);
                 }
                 else
                 {
                     p1.Slice(0, n).CopyTo(c);
-                    //memcpy(c, p1, n * sizeof(double));
                 }
             }
             else
             {
                 if (fct != 1.0)
                 {
-#if NET8_0_OR_GREATER
-                    int idx = 0;
-                    int endIdx = n;
-                    if (Vector.IsHardwareAccelerated)
-                    {
-                        int vectorEndIdx = endIdx - (n % Vector<double>.Count);
-                        while (idx < vectorEndIdx)
-                        {
-                            Span<double> slice = c.Slice(idx, Vector<double>.Count);
-                            Vector.Multiply(new Vector<double>(slice), fct).CopyTo(slice);
-                            idx += Vector<double>.Count;
-                        }
-                    }
-
-                    while (idx < endIdx)
-                    {
-                        c[idx++] *= fct;
-                    }
-#else
-                    for (int i = 0; i < n; ++i)
-                    {
-                        c[i] *= fct;
-                    }
-#endif
+                    Intrinsics.ScaleSpanInPlace(c.Slice(0, n), fct);
                 }
             }
         }
@@ -433,7 +406,6 @@ namespace PocketFFT
         {
             const int cdim = 2;
 
-            if (Constants.NAIL_TEST) NailTest.PrintDoubleArray(cc.Slice(0, cdim * l1));
             for (int k = 0; k < l1; k++)
             {
                 ch[(0) + ido * ((0) + cdim * (k))] = cc[(0) + ido * ((k) + l1 * (0))] + cc[(0) + ido * ((k) + l1 * (1))];
@@ -470,347 +442,10 @@ namespace PocketFFT
             }
         }
 
-        private static void radf3(int ido, int l1, Span<double> cc, Span<double> ch, Span<double> wa)
-        {
-            const int cdim = 3;
-            const double taur = -0.5, taui = 0.86602540378443864676;
-
-            if (Constants.NAIL_TEST) NailTest.PrintDoubleArray(cc.Slice(0, cdim * l1));
-            for (int k = 0; k < l1; k++)
-            {
-                double cr2 = cc[(0) + ido * ((k) + l1 * (1))] + cc[(0) + ido * ((k) + l1 * (2))];
-                ch[(0) + ido * ((0) + cdim * (k))] = cc[(0) + ido * ((k) + l1 * (0))] + cr2;
-                ch[(0) + ido * ((2) + cdim * (k))] = taui * (cc[(0) + ido * ((k) + l1 * (2))] - cc[(0) + ido * ((k) + l1 * (1))]);
-                ch[(ido - 1) + ido * ((1) + cdim * (k))] = cc[(0) + ido * ((k) + l1 * (0))] + taur * cr2;
-            }
-
-            if (ido == 1)
-            {
-                return;
-            }
-
-            for (int k = 0; k < l1; k++)
-            {
-                for (int i = 2; i < ido; i += 2)
-                {
-                    int ic = ido - i;
-                    double di2, di3, dr2, dr3;
-                    dr2 = wa[(i - 2) + (0) * (ido - 1)] * cc[(i - 1) + ido * ((k) + l1 * (1))] + wa[(i - 1) + (0) * (ido - 1)] * cc[(i) + ido * ((k) + l1 * (1))];
-                    di2 = wa[(i - 2) + (0) * (ido - 1)] * cc[(i) + ido * ((k) + l1 * (1))] - wa[(i - 1) + (0) * (ido - 1)] * cc[(i - 1) + ido * ((k) + l1 * (1))]; // d2=conj(WA0)*CC1
-                    dr3 = wa[(i - 2) + (1) * (ido - 1)] * cc[(i - 1) + ido * ((k) + l1 * (2))] + wa[(i - 1) + (1) * (ido - 1)] * cc[(i) + ido * ((k) + l1 * (2))];
-                    di3 = wa[(i - 2) + (1) * (ido - 1)] * cc[(i) + ido * ((k) + l1 * (2))] - wa[(i - 1) + (1) * (ido - 1)] * cc[(i - 1) + ido * ((k) + l1 * (2))]; // d3=conj(WA1)*CC2
-                    double cr2 = dr2 + dr3; // c add
-                    double ci2 = di2 + di3;
-                    ch[(i - 1) + ido * ((0) + cdim * (k))] = cc[(i - 1) + ido * ((k) + l1 * (0))] + cr2; // c add
-                    ch[(i) + ido * ((0) + cdim * (k))] = cc[(i) + ido * ((k) + l1 * (0))] + ci2;
-                    double tr2 = cc[(i - 1) + ido * ((k) + l1 * (0))] + taur * cr2; // c add
-                    double ti2 = cc[(i) + ido * ((k) + l1 * (0))] + taur * ci2;
-                    double tr3 = taui * (di2 - di3);  // t3 = taui*i*(d3-d2)?
-                    double ti3 = taui * (dr3 - dr2);
-                    ch[(i - 1) + ido * ((2) + cdim * (k))] = tr2 + tr3;
-                    ch[(ic - 1) + ido * ((1) + cdim * (k))] = tr2 - tr3; // PM(i) = t2+t3
-                    ch[(i) + ido * ((2) + cdim * (k))] = ti3 + ti2;
-                    ch[(ic) + ido * ((1) + cdim * (k))] = ti3 - ti2; // PM(ic) = conj(t2-t3)
-                }
-            }
-        }
-
-        private static void radf4(int ido, int l1, Span<double> cc, Span<double> ch, Span<double> wa)
-        {
-            const int cdim = 4;
-            const double hsqt2 = 0.70710678118654752440;
-
-            if (Constants.NAIL_TEST) NailTest.PrintDoubleArray(cc.Slice(0, cdim * l1));
-            for (int k = 0; k < l1; k++)
-            {
-                double tr1, tr2;
-                tr1 = cc[(0) + ido * ((k) + l1 * (3))] + cc[(0) + ido * ((k) + l1 * (1))];
-                ch[(0) + ido * ((2) + cdim * (k))] = cc[(0) + ido * ((k) + l1 * (3))] - cc[(0) + ido * ((k) + l1 * (1))];
-                tr2 = cc[(0) + ido * ((k) + l1 * (0))] + cc[(0) + ido * ((k) + l1 * (2))];
-                ch[(ido - 1) + ido * ((1) + cdim * (k))] = cc[(0) + ido * ((k) + l1 * (0))] - cc[(0) + ido * ((k) + l1 * (2))];
-                ch[(0) + ido * ((0) + cdim * (k))] = tr2 + tr1;
-                ch[(ido - 1) + ido * ((3) + cdim * (k))] = tr2 - tr1;
-            }
-
-            if ((ido & 1) == 0)
-            {
-                for (int k = 0; k < l1; k++)
-                {
-                    double ti1 = -hsqt2 * (cc[(ido - 1) + ido * ((k) + l1 * (1))] + cc[(ido - 1) + ido * ((k) + l1 * (3))]);
-                    double tr1 = hsqt2 * (cc[(ido - 1) + ido * ((k) + l1 * (1))] - cc[(ido - 1) + ido * ((k) + l1 * (3))]);
-                    ch[(ido - 1) + ido * ((0) + cdim * (k))] = cc[(ido - 1) + ido * ((k) + l1 * (0))] + tr1;
-                    ch[(ido - 1) + ido * ((2) + cdim * (k))] = cc[(ido - 1) + ido * ((k) + l1 * (0))] - tr1;
-                    ch[(0) + ido * ((3) + cdim * (k))] = ti1 + cc[(ido - 1) + ido * ((k) + l1 * (2))];
-                    ch[(0) + ido * ((1) + cdim * (k))] = ti1 - cc[(ido - 1) + ido * ((k) + l1 * (2))];
-                }
-            }
-
-            if (ido <= 2)
-            {
-                return;
-            }
-
-            for (int k = 0; k < l1; k++)
-            {
-                for (int i = 2; i < ido; i += 2)
-                {
-                    int ic = ido - i;
-                    double ci2, ci3, ci4, cr2, cr3, cr4, ti1, ti2, ti3, ti4, tr1, tr2, tr3, tr4;
-                    cr2 = wa[(i - 2) + (0) * (ido - 1)] * cc[(i - 1) + ido * ((k) + l1 * (1))] + wa[(i - 1) + (0) * (ido - 1)] * cc[(i) + ido * ((k) + l1 * (1))];
-                    ci2 = wa[(i - 2) + (0) * (ido - 1)] * cc[(i) + ido * ((k) + l1 * (1))] - wa[(i - 1) + (0) * (ido - 1)] * cc[(i - 1) + ido * ((k) + l1 * (1))];
-                    cr3 = wa[(i - 2) + (1) * (ido - 1)] * cc[(i - 1) + ido * ((k) + l1 * (2))] + wa[(i - 1) + (1) * (ido - 1)] * cc[(i) + ido * ((k) + l1 * (2))];
-                    ci3 = wa[(i - 2) + (1) * (ido - 1)] * cc[(i) + ido * ((k) + l1 * (2))] - wa[(i - 1) + (1) * (ido - 1)] * cc[(i - 1) + ido * ((k) + l1 * (2))];
-                    cr4 = wa[(i - 2) + (2) * (ido - 1)] * cc[(i - 1) + ido * ((k) + l1 * (3))] + wa[(i - 1) + (2) * (ido - 1)] * cc[(i) + ido * ((k) + l1 * (3))];
-                    ci4 = wa[(i - 2) + (2) * (ido - 1)] * cc[(i) + ido * ((k) + l1 * (3))] - wa[(i - 1) + (2) * (ido - 1)] * cc[(i - 1) + ido * ((k) + l1 * (3))];
-                    tr1 = cr4 + cr2; tr4 = cr4 - cr2;
-                    ti1 = ci2 + ci4; ti4 = ci2 - ci4;
-                    tr2 = cc[(i - 1) + ido * ((k) + l1 * (0))] + cr3;
-                    tr3 = cc[(i - 1) + ido * ((k) + l1 * (0))] - cr3;
-                    ti2 = cc[(i) + ido * ((k) + l1 * (0))] + ci3;
-                    ti3 = cc[(i) + ido * ((k) + l1 * (0))] - ci3;
-                    ch[(i - 1) + ido * ((0) + cdim * (k))] = tr2 + tr1; ch[(ic - 1) + ido * ((3) + cdim * (k))] = tr2 - tr1;
-                    ch[(i) + ido * ((0) + cdim * (k))] = ti1 + ti2;
-                    ch[(ic) + ido * ((3) + cdim * (k))] = ti1 - ti2;
-                    ch[(i - 1) + ido * ((2) + cdim * (k))] = tr3 + ti4; ch[(ic - 1) + ido * ((1) + cdim * (k))] = tr3 - ti4;
-                    ch[(i) + ido * ((2) + cdim * (k))] = tr4 + ti3;
-                    ch[(ic) + ido * ((1) + cdim * (k))] = tr4 - ti3;
-                }
-            }
-        }
-
-        private static void radf5(int ido, int l1, Span<double> cc, Span<double> ch, Span<double> wa)
-        {
-            const int cdim = 5;
-            const double
-                tr11 = 0.3090169943749474241,
-                ti11 = 0.95105651629515357212,
-                tr12 = -0.8090169943749474241,
-                ti12 = 0.58778525229247312917;
-
-            if (Constants.NAIL_TEST) NailTest.PrintDoubleArray(cc.Slice(0, cdim * l1));
-            for (int k = 0; k < l1; k++)
-            {
-                double cr2, cr3, ci4, ci5;
-                cr2 = cc[(0) + ido * ((k) + l1 * (4))] + cc[(0) + ido * ((k) + l1 * (1))];
-                ci5 = cc[(0) + ido * ((k) + l1 * (4))] - cc[(0) + ido * ((k) + l1 * (1))];
-                cr3 = cc[(0) + ido * ((k) + l1 * (3))] + cc[(0) + ido * ((k) + l1 * (2))];
-                ci4 = cc[(0) + ido * ((k) + l1 * (3))] - cc[(0) + ido * ((k) + l1 * (2))];
-                ch[(0) + ido * ((0) + cdim * (k))] = cc[(0) + ido * ((k) + l1 * (0))] + cr2 + cr3;
-                ch[(ido - 1) + ido * ((1) + cdim * (k))] = cc[(0) + ido * ((k) + l1 * (0))] + tr11 * cr2 + tr12 * cr3;
-                ch[(0) + ido * ((2) + cdim * (k))] = ti11 * ci5 + ti12 * ci4;
-                ch[(ido - 1) + ido * ((3) + cdim * (k))] = cc[(0) + ido * ((k) + l1 * (0))] + tr12 * cr2 + tr11 * cr3;
-                ch[(0) + ido * ((4) + cdim * (k))] = ti12 * ci5 - ti11 * ci4;
-            }
-
-            if (ido == 1)
-            {
-                return;
-            }
-
-            for (int k = 0; k < l1; ++k)
-            {
-                for (int i = 2; i < ido; i += 2)
-                {
-                    double ci2, di2, ci4, ci5, di3, di4, di5, ci3, cr2, cr3, dr2, dr3,
-                        dr4, dr5, cr5, cr4, ti2, ti3, ti5, ti4, tr2, tr3, tr4, tr5;
-                    int ic = ido - i;
-                    dr2 = wa[(i - 2) + (0) * (ido - 1)] * cc[(i - 1) + ido * ((k) + l1 * (1))] + wa[(i - 1) + (0) * (ido - 1)] * cc[(i) + ido * ((k) + l1 * (1))];
-                    di2 = wa[(i - 2) + (0) * (ido - 1)] * cc[(i) + ido * ((k) + l1 * (1))] - wa[(i - 1) + (0) * (ido - 1)] * cc[(i - 1) + ido * ((k) + l1 * (1))];
-                    dr3 = wa[(i - 2) + (1) * (ido - 1)] * cc[(i - 1) + ido * ((k) + l1 * (2))] + wa[(i - 1) + (1) * (ido - 1)] * cc[(i) + ido * ((k) + l1 * (2))];
-                    di3 = wa[(i - 2) + (1) * (ido - 1)] * cc[(i) + ido * ((k) + l1 * (2))] - wa[(i - 1) + (1) * (ido - 1)] * cc[(i - 1) + ido * ((k) + l1 * (2))];
-                    dr4 = wa[(i - 2) + (2) * (ido - 1)] * cc[(i - 1) + ido * ((k) + l1 * (3))] + wa[(i - 1) + (2) * (ido - 1)] * cc[(i) + ido * ((k) + l1 * (3))];
-                    di4 = wa[(i - 2) + (2) * (ido - 1)] * cc[(i) + ido * ((k) + l1 * (3))] - wa[(i - 1) + (2) * (ido - 1)] * cc[(i - 1) + ido * ((k) + l1 * (3))];
-                    dr5 = wa[(i - 2) + (3) * (ido - 1)] * cc[(i - 1) + ido * ((k) + l1 * (4))] + wa[(i - 1) + (3) * (ido - 1)] * cc[(i) + ido * ((k) + l1 * (4))];
-                    di5 = wa[(i - 2) + (3) * (ido - 1)] * cc[(i) + ido * ((k) + l1 * (4))] - wa[(i - 1) + (3) * (ido - 1)] * cc[(i - 1) + ido * ((k) + l1 * (4))];
-                    cr2 = dr5 + dr2; ci5 = dr5 - dr2;
-                    ci2 = di2 + di5; cr5 = di2 - di5;
-                    cr3 = dr4 + dr3; ci4 = dr4 - dr3;
-                    ci3 = di3 + di4; cr4 = di3 - di4;
-                    ch[(i - 1) + ido * ((0) + cdim * (k))] = cc[(i - 1) + ido * ((k) + l1 * (0))] + cr2 + cr3;
-                    ch[(i) + ido * ((0) + cdim * (k))] = cc[(i) + ido * ((k) + l1 * (0))] + ci2 + ci3;
-                    tr2 = cc[(i - 1) + ido * ((k) + l1 * (0))] + tr11 * cr2 + tr12 * cr3;
-                    ti2 = cc[(i) + ido * ((k) + l1 * (0))] + tr11 * ci2 + tr12 * ci3;
-                    tr3 = cc[(i - 1) + ido * ((k) + l1 * (0))] + tr12 * cr2 + tr11 * cr3;
-                    ti3 = cc[(i) + ido * ((k) + l1 * (0))] + tr12 * ci2 + tr11 * ci3;
-                    tr5 = cr5 * ti11 + cr4 * ti12;
-                    tr4 = cr5 * ti12 - cr4 * ti11;
-                    ti5 = ci5 * ti11 + ci4 * ti12;
-                    ti4 = ci5 * ti12 - ci4 * ti11;
-                    ch[(i - 1) + ido * ((2) + cdim * (k))] = tr2 + tr5;
-                    ch[(ic - 1) + ido * ((1) + cdim * (k))] = tr2 - tr5;
-                    ch[(i) + ido * ((2) + cdim * (k))] = ti5 + ti2;
-                    ch[(ic) + ido * ((1) + cdim * (k))] = ti5 - ti2;
-                    ch[(i - 1) + ido * ((4) + cdim * (k))] = tr3 + tr4;
-                    ch[(ic - 1) + ido * ((3) + cdim * (k))] = tr3 - tr4;
-                    ch[(i) + ido * ((4) + cdim * (k))] = ti4 + ti3;
-                    ch[(ic) + ido * ((3) + cdim * (k))] = ti4 - ti3;
-                }
-            }
-        }
-
-        private static void radfg(int ido, int ip, int l1, Span<double> cc, Span<double> ch, Span<double> wa, Span<double> csarr)
-        {
-            int cdim = ip;
-            int ipph = (ip + 1) / 2;
-            int idl1 = ido * l1;
-
-            if (Constants.NAIL_TEST) NailTest.PrintDoubleArray(cc.Slice(0, cdim * l1));
-            if (ido > 1)
-            {
-                for (int j = 1, jc = ip - 1; j < ipph; ++j, --jc)              // 114
-                {
-                    int is1 = (j - 1) * (ido - 1),
-                        is2 = (jc - 1) * (ido - 1);
-                    for (int k = 0; k < l1; ++k)                            // 113
-                    {
-                        int idij = is1;
-                        int idij2 = is2;
-
-                        for (int i = 1; i <= ido - 2; i += 2)                      // 112
-                        {
-                            double t1 = cc[(i) + ido * ((k) + l1 * (j))], t2 = cc[(i + 1) + ido * ((k) + l1 * (j))],
-                                t3 = cc[(i) + ido * ((k) + l1 * (jc))], t4 = cc[(i + 1) + ido * ((k) + l1 * (jc))];
-                            double x1 = wa[idij] * t1 + wa[idij + 1] * t2,
-                                x2 = wa[idij] * t2 - wa[idij + 1] * t1,
-                                x3 = wa[idij2] * t3 + wa[idij2 + 1] * t4,
-                                x4 = wa[idij2] * t4 - wa[idij2 + 1] * t3;
-                            cc[(i) + ido * ((k) + l1 * (j))] = x1 + x3;
-                            cc[(i) + ido * ((k) + l1 * (jc))] = x2 - x4;
-                            cc[(i + 1) + ido * ((k) + l1 * (j))] = x2 + x4;
-                            cc[(i + 1) + ido * ((k) + l1 * (jc))] = x3 - x1;
-                            idij += 2;
-                            idij2 += 2;
-                        }
-                    }
-                }
-            }
-
-            for (int j = 1, jc = ip - 1; j < ipph; ++j, --jc)                // 123
-            {
-                for (int k = 0; k < l1; ++k)                              // 122
-                {
-                    double t1 = cc[(0) + ido * ((k) + l1 * (j))], t2 = cc[(0) + ido * ((k) + l1 * (jc))];
-                    cc[(0) + ido * ((k) + l1 * (j))] = t1 + t2;
-                    cc[(0) + ido * ((k) + l1 * (jc))] = t2 - t1;
-                }
-            }
-
-            //everything in C
-            //memset(ch,0,ip*l1*ido*sizeof(double));
-
-            for (int l = 1, lc = ip - 1; l < ipph; ++l, --lc)                 // 127
-            {
-                for (int ik = 0; ik < idl1; ++ik)                         // 124
-                {
-                    ch[(ik) + idl1 * (l)] = cc[(ik) + idl1 * (0)] + csarr[2 * l] * cc[(ik) + idl1 * (1)] + csarr[4 * l] * cc[(ik) + idl1 * (2)];
-                    ch[(ik) + idl1 * (lc)] = csarr[2 * l + 1] * cc[(ik) + idl1 * (ip - 1)] + csarr[4 * l + 1] * cc[(ik) + idl1 * (ip - 2)];
-                }
-
-                int iang = 2 * l;
-                int j = 3, jc = ip - 3;
-                for (; j < ipph - 3; j += 4, jc -= 4)              // 126
-                {
-                    iang += l; if (iang >= ip) iang -= ip;
-                    double ar1 = csarr[2 * iang], ai1 = csarr[2 * iang + 1];
-                    iang += l; if (iang >= ip) iang -= ip;
-                    double ar2 = csarr[2 * iang], ai2 = csarr[2 * iang + 1];
-                    iang += l; if (iang >= ip) iang -= ip;
-                    double ar3 = csarr[2 * iang], ai3 = csarr[2 * iang + 1];
-                    iang += l; if (iang >= ip) iang -= ip;
-                    double ar4 = csarr[2 * iang], ai4 = csarr[2 * iang + 1];
-                    for (int ik = 0; ik < idl1; ++ik)                       // 125
-                    {
-                        ch[(ik) + idl1 * (l)] += ar1 * cc[(ik) + idl1 * (j)] + ar2 * cc[(ik) + idl1 * (j + 1)]
-                            + ar3 * cc[(ik) + idl1 * (j + 2)] + ar4 * cc[(ik) + idl1 * (j + 3)];
-                        ch[(ik) + idl1 * (lc)] += ai1 * cc[(ik) + idl1 * (jc)] + ai2 * cc[(ik) + idl1 * (jc - 1)]
-                            + ai3 * cc[(ik) + idl1 * (jc - 2)] + ai4 * cc[(ik) + idl1 * (jc - 3)];
-                    }
-                }
-
-                for (; j < ipph - 1; j += 2, jc -= 2)              // 126
-                {
-                    iang += l; if (iang >= ip) iang -= ip;
-                    double ar1 = csarr[2 * iang], ai1 = csarr[2 * iang + 1];
-                    iang += l; if (iang >= ip) iang -= ip;
-                    double ar2 = csarr[2 * iang], ai2 = csarr[2 * iang + 1];
-                    for (int ik = 0; ik < idl1; ++ik)                       // 125
-                    {
-                        ch[(ik) + idl1 * (l)] += ar1 * cc[(ik) + idl1 * (j)] + ar2 * cc[(ik) + idl1 * (j + 1)];
-                        ch[(ik) + idl1 * (lc)] += ai1 * cc[(ik) + idl1 * (jc)] + ai2 * cc[(ik) + idl1 * (jc - 1)];
-                    }
-                }
-
-                for (; j < ipph; ++j, --jc)              // 126
-                {
-                    iang += l; if (iang >= ip) iang -= ip;
-                    double ar = csarr[2 * iang], ai = csarr[2 * iang + 1];
-                    for (int ik = 0; ik < idl1; ++ik)                       // 125
-                    {
-                        ch[(ik) + idl1 * (l)] += ar * cc[(ik) + idl1 * (j)];
-                        ch[(ik) + idl1 * (lc)] += ai * cc[(ik) + idl1 * (jc)];
-                    }
-                }
-            }
-            for (int ik = 0; ik < idl1; ++ik)                         // 101
-            {
-                ch[(ik) + idl1 * (0)] = cc[(ik) + idl1 * (0)];
-            }
-
-            for (int j = 1; j < ipph; ++j)                              // 129
-            {
-                for (int ik = 0; ik < idl1; ++ik)                         // 128
-                {
-                    ch[(ik) + idl1 * (0)] += cc[(ik) + idl1 * (j)];
-                }
-            }
-
-            // everything in CH at this point!
-            //memset(cc,0,ip*l1*ido*sizeof(double));
-
-            for (int k = 0; k < l1; ++k)                                // 131
-            {
-                for (int i = 0; i < ido; ++i)                             // 130
-                {
-                    cc[(i) + ido * ((0) + cdim * (k))] = ch[(i) + ido * ((k) + l1 * (0))];
-                }
-            }
-
-            for (int j = 1, jc = ip - 1; j < ipph; ++j, --jc)                // 137
-            {
-                int j2 = 2 * j - 1;
-                for (int k = 0; k < l1; ++k)                              // 136
-                {
-                    cc[(ido - 1) + ido * ((j2) + cdim * (k))] = ch[(0) + ido * ((k) + l1 * (j))];
-                    cc[(0) + ido * ((j2 + 1) + cdim * (k))] = ch[(0) + ido * ((k) + l1 * (jc))];
-                }
-            }
-
-            if (ido == 1)
-            {
-                return;
-            }
-
-            for (int j = 1, jc = ip - 1; j < ipph; ++j, --jc)                // 140
-            {
-                int j2 = 2 * j - 1;
-                for (int k = 0; k < l1; ++k)                               // 139
-                {
-                    for (int i = 1, ic = ido - i - 2; i <= ido - 2; i += 2, ic -= 2)      // 138
-                    {
-                        cc[(i) + ido * ((j2 + 1) + cdim * (k))] = ch[(i) + ido * ((k) + l1 * (j))] + ch[(i) + ido * ((k) + l1 * (jc))];
-                        cc[(ic) + ido * ((j2) + cdim * (k))] = ch[(i) + ido * ((k) + l1 * (j))] - ch[(i) + ido * ((k) + l1 * (jc))];
-                        cc[(i + 1) + ido * ((j2 + 1) + cdim * (k))] = ch[(i + 1) + ido * ((k) + l1 * (j))] + ch[(i + 1) + ido * ((k) + l1 * (jc))];
-                        cc[(ic + 1) + ido * ((j2) + cdim * (k))] = ch[(i + 1) + ido * ((k) + l1 * (jc))] - ch[(i + 1) + ido * ((k) + l1 * (j))];
-                    }
-                }
-            }
-        }
-
         private static void radb2(int ido, int l1, Span<double> cc, Span<double> ch, Span<double> wa)
         {
             const int cdim = 2;
 
-            if (Constants.NAIL_TEST) NailTest.PrintDoubleArray(cc.Slice(0, cdim * l1));
             for (int k = 0; k < l1; k++)
             {
                 ch[(0) + ido * ((k) + l1 * (0))] = cc[(0) + ido * ((0) + cdim * (k))] + cc[(ido - 1) + ido * ((1) + cdim * (k))];
@@ -851,7 +486,6 @@ namespace PocketFFT
             const int cdim = 3;
             const double taur = -0.5, taui = 0.86602540378443864676;
 
-            if (Constants.NAIL_TEST) NailTest.PrintDoubleArray(cc.Slice(0, cdim * l1));
             for (int k = 0; k < l1; k++)
             {
                 double tr2 = 2.0 * cc[(ido - 1) + ido * ((1) + cdim * (k))];
@@ -891,12 +525,55 @@ namespace PocketFFT
             }
         }
 
+        private static void radf3(int ido, int l1, Span<double> cc, Span<double> ch, Span<double> wa)
+        {
+            const int cdim = 3;
+            const double taur = -0.5, taui = 0.86602540378443864676;
+
+            for (int k = 0; k < l1; k++)
+            {
+                double cr2 = cc[(0) + ido * ((k) + l1 * (1))] + cc[(0) + ido * ((k) + l1 * (2))];
+                ch[(0) + ido * ((0) + cdim * (k))] = cc[(0) + ido * ((k) + l1 * (0))] + cr2;
+                ch[(0) + ido * ((2) + cdim * (k))] = taui * (cc[(0) + ido * ((k) + l1 * (2))] - cc[(0) + ido * ((k) + l1 * (1))]);
+                ch[(ido - 1) + ido * ((1) + cdim * (k))] = cc[(0) + ido * ((k) + l1 * (0))] + taur * cr2;
+            }
+
+            if (ido == 1)
+            {
+                return;
+            }
+
+            for (int k = 0; k < l1; k++)
+            {
+                for (int i = 2; i < ido; i += 2)
+                {
+                    int ic = ido - i;
+                    double di2, di3, dr2, dr3;
+                    dr2 = wa[(i - 2) + (0) * (ido - 1)] * cc[(i - 1) + ido * ((k) + l1 * (1))] + wa[(i - 1) + (0) * (ido - 1)] * cc[(i) + ido * ((k) + l1 * (1))];
+                    di2 = wa[(i - 2) + (0) * (ido - 1)] * cc[(i) + ido * ((k) + l1 * (1))] - wa[(i - 1) + (0) * (ido - 1)] * cc[(i - 1) + ido * ((k) + l1 * (1))]; // d2=conj(WA0)*CC1
+                    dr3 = wa[(i - 2) + (1) * (ido - 1)] * cc[(i - 1) + ido * ((k) + l1 * (2))] + wa[(i - 1) + (1) * (ido - 1)] * cc[(i) + ido * ((k) + l1 * (2))];
+                    di3 = wa[(i - 2) + (1) * (ido - 1)] * cc[(i) + ido * ((k) + l1 * (2))] - wa[(i - 1) + (1) * (ido - 1)] * cc[(i - 1) + ido * ((k) + l1 * (2))]; // d3=conj(WA1)*CC2
+                    double cr2 = dr2 + dr3; // c add
+                    double ci2 = di2 + di3;
+                    ch[(i - 1) + ido * ((0) + cdim * (k))] = cc[(i - 1) + ido * ((k) + l1 * (0))] + cr2; // c add
+                    ch[(i) + ido * ((0) + cdim * (k))] = cc[(i) + ido * ((k) + l1 * (0))] + ci2;
+                    double tr2 = cc[(i - 1) + ido * ((k) + l1 * (0))] + taur * cr2; // c add
+                    double ti2 = cc[(i) + ido * ((k) + l1 * (0))] + taur * ci2;
+                    double tr3 = taui * (di2 - di3);  // t3 = taui*i*(d3-d2)?
+                    double ti3 = taui * (dr3 - dr2);
+                    ch[(i - 1) + ido * ((2) + cdim * (k))] = tr2 + tr3;
+                    ch[(ic - 1) + ido * ((1) + cdim * (k))] = tr2 - tr3; // PM(i) = t2+t3
+                    ch[(i) + ido * ((2) + cdim * (k))] = ti3 + ti2;
+                    ch[(ic) + ido * ((1) + cdim * (k))] = ti3 - ti2; // PM(ic) = conj(t2-t3)
+                }
+            }
+        }
+
         private static void radb4(int ido, int l1, Span<double> cc, Span<double> ch, Span<double> wa)
         {
             const int cdim = 4;
             const double sqrt2 = 1.41421356237309504880;
 
-            if (Constants.NAIL_TEST) NailTest.PrintDoubleArray(cc.Slice(0, cdim * l1));
             for (int k = 0; k < l1; k++)
             {
                 double tr1, tr2;
@@ -960,13 +637,74 @@ namespace PocketFFT
             }
         }
 
+        private static void radf4(int ido, int l1, Span<double> cc, Span<double> ch, Span<double> wa)
+        {
+            const int cdim = 4;
+            const double hsqt2 = 0.70710678118654752440;
+
+            for (int k = 0; k < l1; k++)
+            {
+                double tr1, tr2;
+                tr1 = cc[(0) + ido * ((k) + l1 * (3))] + cc[(0) + ido * ((k) + l1 * (1))];
+                ch[(0) + ido * ((2) + cdim * (k))] = cc[(0) + ido * ((k) + l1 * (3))] - cc[(0) + ido * ((k) + l1 * (1))];
+                tr2 = cc[(0) + ido * ((k) + l1 * (0))] + cc[(0) + ido * ((k) + l1 * (2))];
+                ch[(ido - 1) + ido * ((1) + cdim * (k))] = cc[(0) + ido * ((k) + l1 * (0))] - cc[(0) + ido * ((k) + l1 * (2))];
+                ch[(0) + ido * ((0) + cdim * (k))] = tr2 + tr1;
+                ch[(ido - 1) + ido * ((3) + cdim * (k))] = tr2 - tr1;
+            }
+
+            if ((ido & 1) == 0)
+            {
+                for (int k = 0; k < l1; k++)
+                {
+                    double ti1 = -hsqt2 * (cc[(ido - 1) + ido * ((k) + l1 * (1))] + cc[(ido - 1) + ido * ((k) + l1 * (3))]);
+                    double tr1 = hsqt2 * (cc[(ido - 1) + ido * ((k) + l1 * (1))] - cc[(ido - 1) + ido * ((k) + l1 * (3))]);
+                    ch[(ido - 1) + ido * ((0) + cdim * (k))] = cc[(ido - 1) + ido * ((k) + l1 * (0))] + tr1;
+                    ch[(ido - 1) + ido * ((2) + cdim * (k))] = cc[(ido - 1) + ido * ((k) + l1 * (0))] - tr1;
+                    ch[(0) + ido * ((3) + cdim * (k))] = ti1 + cc[(ido - 1) + ido * ((k) + l1 * (2))];
+                    ch[(0) + ido * ((1) + cdim * (k))] = ti1 - cc[(ido - 1) + ido * ((k) + l1 * (2))];
+                }
+            }
+
+            if (ido <= 2)
+            {
+                return;
+            }
+
+            for (int k = 0; k < l1; k++)
+            {
+                for (int i = 2; i < ido; i += 2)
+                {
+                    int ic = ido - i;
+                    double ci2, ci3, ci4, cr2, cr3, cr4, ti1, ti2, ti3, ti4, tr1, tr2, tr3, tr4;
+                    cr2 = wa[(i - 2) + (0) * (ido - 1)] * cc[(i - 1) + ido * ((k) + l1 * (1))] + wa[(i - 1) + (0) * (ido - 1)] * cc[(i) + ido * ((k) + l1 * (1))];
+                    ci2 = wa[(i - 2) + (0) * (ido - 1)] * cc[(i) + ido * ((k) + l1 * (1))] - wa[(i - 1) + (0) * (ido - 1)] * cc[(i - 1) + ido * ((k) + l1 * (1))];
+                    cr3 = wa[(i - 2) + (1) * (ido - 1)] * cc[(i - 1) + ido * ((k) + l1 * (2))] + wa[(i - 1) + (1) * (ido - 1)] * cc[(i) + ido * ((k) + l1 * (2))];
+                    ci3 = wa[(i - 2) + (1) * (ido - 1)] * cc[(i) + ido * ((k) + l1 * (2))] - wa[(i - 1) + (1) * (ido - 1)] * cc[(i - 1) + ido * ((k) + l1 * (2))];
+                    cr4 = wa[(i - 2) + (2) * (ido - 1)] * cc[(i - 1) + ido * ((k) + l1 * (3))] + wa[(i - 1) + (2) * (ido - 1)] * cc[(i) + ido * ((k) + l1 * (3))];
+                    ci4 = wa[(i - 2) + (2) * (ido - 1)] * cc[(i) + ido * ((k) + l1 * (3))] - wa[(i - 1) + (2) * (ido - 1)] * cc[(i - 1) + ido * ((k) + l1 * (3))];
+                    tr1 = cr4 + cr2; tr4 = cr4 - cr2;
+                    ti1 = ci2 + ci4; ti4 = ci2 - ci4;
+                    tr2 = cc[(i - 1) + ido * ((k) + l1 * (0))] + cr3;
+                    tr3 = cc[(i - 1) + ido * ((k) + l1 * (0))] - cr3;
+                    ti2 = cc[(i) + ido * ((k) + l1 * (0))] + ci3;
+                    ti3 = cc[(i) + ido * ((k) + l1 * (0))] - ci3;
+                    ch[(i - 1) + ido * ((0) + cdim * (k))] = tr2 + tr1; ch[(ic - 1) + ido * ((3) + cdim * (k))] = tr2 - tr1;
+                    ch[(i) + ido * ((0) + cdim * (k))] = ti1 + ti2;
+                    ch[(ic) + ido * ((3) + cdim * (k))] = ti1 - ti2;
+                    ch[(i - 1) + ido * ((2) + cdim * (k))] = tr3 + ti4; ch[(ic - 1) + ido * ((1) + cdim * (k))] = tr3 - ti4;
+                    ch[(i) + ido * ((2) + cdim * (k))] = tr4 + ti3;
+                    ch[(ic) + ido * ((1) + cdim * (k))] = tr4 - ti3;
+                }
+            }
+        }
+
         private static void radb5(int ido, int l1, Span<double> cc, Span<double> ch, Span<double> wa)
         {
             const int cdim = 5;
             const double tr11 = 0.3090169943749474241, ti11 = 0.95105651629515357212,
                 tr12 = -0.8090169943749474241, ti12 = 0.58778525229247312917;
 
-            if (Constants.NAIL_TEST) NailTest.PrintDoubleArray(cc.Slice(0, cdim * l1));
             for (int k = 0; k < l1; k++)
             {
                 double ti5 = cc[(0) + ido * ((2) + cdim * (k))] + cc[(0) + ido * ((2) + cdim * (k))];
@@ -1028,13 +766,81 @@ namespace PocketFFT
             }
         }
 
+        private static void radf5(int ido, int l1, Span<double> cc, Span<double> ch, Span<double> wa)
+        {
+            const int cdim = 5;
+            const double
+                tr11 = 0.3090169943749474241,
+                ti11 = 0.95105651629515357212,
+                tr12 = -0.8090169943749474241,
+                ti12 = 0.58778525229247312917;
+
+            for (int k = 0; k < l1; k++)
+            {
+                double cr2, cr3, ci4, ci5;
+                cr2 = cc[(0) + ido * ((k) + l1 * (4))] + cc[(0) + ido * ((k) + l1 * (1))];
+                ci5 = cc[(0) + ido * ((k) + l1 * (4))] - cc[(0) + ido * ((k) + l1 * (1))];
+                cr3 = cc[(0) + ido * ((k) + l1 * (3))] + cc[(0) + ido * ((k) + l1 * (2))];
+                ci4 = cc[(0) + ido * ((k) + l1 * (3))] - cc[(0) + ido * ((k) + l1 * (2))];
+                ch[(0) + ido * ((0) + cdim * (k))] = cc[(0) + ido * ((k) + l1 * (0))] + cr2 + cr3;
+                ch[(ido - 1) + ido * ((1) + cdim * (k))] = cc[(0) + ido * ((k) + l1 * (0))] + tr11 * cr2 + tr12 * cr3;
+                ch[(0) + ido * ((2) + cdim * (k))] = ti11 * ci5 + ti12 * ci4;
+                ch[(ido - 1) + ido * ((3) + cdim * (k))] = cc[(0) + ido * ((k) + l1 * (0))] + tr12 * cr2 + tr11 * cr3;
+                ch[(0) + ido * ((4) + cdim * (k))] = ti12 * ci5 - ti11 * ci4;
+            }
+
+            if (ido == 1)
+            {
+                return;
+            }
+
+            for (int k = 0; k < l1; ++k)
+            {
+                for (int i = 2; i < ido; i += 2)
+                {
+                    double ci2, di2, ci4, ci5, di3, di4, di5, ci3, cr2, cr3, dr2, dr3,
+                        dr4, dr5, cr5, cr4, ti2, ti3, ti5, ti4, tr2, tr3, tr4, tr5;
+                    int ic = ido - i;
+                    dr2 = wa[(i - 2) + (0) * (ido - 1)] * cc[(i - 1) + ido * ((k) + l1 * (1))] + wa[(i - 1) + (0) * (ido - 1)] * cc[(i) + ido * ((k) + l1 * (1))];
+                    di2 = wa[(i - 2) + (0) * (ido - 1)] * cc[(i) + ido * ((k) + l1 * (1))] - wa[(i - 1) + (0) * (ido - 1)] * cc[(i - 1) + ido * ((k) + l1 * (1))];
+                    dr3 = wa[(i - 2) + (1) * (ido - 1)] * cc[(i - 1) + ido * ((k) + l1 * (2))] + wa[(i - 1) + (1) * (ido - 1)] * cc[(i) + ido * ((k) + l1 * (2))];
+                    di3 = wa[(i - 2) + (1) * (ido - 1)] * cc[(i) + ido * ((k) + l1 * (2))] - wa[(i - 1) + (1) * (ido - 1)] * cc[(i - 1) + ido * ((k) + l1 * (2))];
+                    dr4 = wa[(i - 2) + (2) * (ido - 1)] * cc[(i - 1) + ido * ((k) + l1 * (3))] + wa[(i - 1) + (2) * (ido - 1)] * cc[(i) + ido * ((k) + l1 * (3))];
+                    di4 = wa[(i - 2) + (2) * (ido - 1)] * cc[(i) + ido * ((k) + l1 * (3))] - wa[(i - 1) + (2) * (ido - 1)] * cc[(i - 1) + ido * ((k) + l1 * (3))];
+                    dr5 = wa[(i - 2) + (3) * (ido - 1)] * cc[(i - 1) + ido * ((k) + l1 * (4))] + wa[(i - 1) + (3) * (ido - 1)] * cc[(i) + ido * ((k) + l1 * (4))];
+                    di5 = wa[(i - 2) + (3) * (ido - 1)] * cc[(i) + ido * ((k) + l1 * (4))] - wa[(i - 1) + (3) * (ido - 1)] * cc[(i - 1) + ido * ((k) + l1 * (4))];
+                    cr2 = dr5 + dr2; ci5 = dr5 - dr2;
+                    ci2 = di2 + di5; cr5 = di2 - di5;
+                    cr3 = dr4 + dr3; ci4 = dr4 - dr3;
+                    ci3 = di3 + di4; cr4 = di3 - di4;
+                    ch[(i - 1) + ido * ((0) + cdim * (k))] = cc[(i - 1) + ido * ((k) + l1 * (0))] + cr2 + cr3;
+                    ch[(i) + ido * ((0) + cdim * (k))] = cc[(i) + ido * ((k) + l1 * (0))] + ci2 + ci3;
+                    tr2 = cc[(i - 1) + ido * ((k) + l1 * (0))] + tr11 * cr2 + tr12 * cr3;
+                    ti2 = cc[(i) + ido * ((k) + l1 * (0))] + tr11 * ci2 + tr12 * ci3;
+                    tr3 = cc[(i - 1) + ido * ((k) + l1 * (0))] + tr12 * cr2 + tr11 * cr3;
+                    ti3 = cc[(i) + ido * ((k) + l1 * (0))] + tr12 * ci2 + tr11 * ci3;
+                    tr5 = cr5 * ti11 + cr4 * ti12;
+                    tr4 = cr5 * ti12 - cr4 * ti11;
+                    ti5 = ci5 * ti11 + ci4 * ti12;
+                    ti4 = ci5 * ti12 - ci4 * ti11;
+                    ch[(i - 1) + ido * ((2) + cdim * (k))] = tr2 + tr5;
+                    ch[(ic - 1) + ido * ((1) + cdim * (k))] = tr2 - tr5;
+                    ch[(i) + ido * ((2) + cdim * (k))] = ti5 + ti2;
+                    ch[(ic) + ido * ((1) + cdim * (k))] = ti5 - ti2;
+                    ch[(i - 1) + ido * ((4) + cdim * (k))] = tr3 + tr4;
+                    ch[(ic - 1) + ido * ((3) + cdim * (k))] = tr3 - tr4;
+                    ch[(i) + ido * ((4) + cdim * (k))] = ti4 + ti3;
+                    ch[(ic) + ido * ((3) + cdim * (k))] = ti4 - ti3;
+                }
+            }
+        }
+
         private static void radbg(int ido, int ip, int l1, Span<double> cc, Span<double> ch, Span<double> wa, Span<double> csarr)
         {
             int cdim = ip;
             int ipph = (ip + 1) / 2;
             int idl1 = ido * l1;
 
-            if (Constants.NAIL_TEST) NailTest.PrintDoubleArray(cc.Slice(0, cdim * l1));
             for (int k = 0; k < l1; ++k)        // 102
             {
                 for (int i = 0; i < ido; ++i)     // 101
@@ -1070,6 +876,7 @@ namespace PocketFFT
                     }
                 }
             }
+
             for (int l = 1, lc = ip - 1; l < ipph; ++l, --lc)
             {
                 for (int ik = 0; ik < idl1; ++ik)
@@ -1098,6 +905,7 @@ namespace PocketFFT
                             + ai3 * ch[(ik) + idl1 * (jc - 2)] + ai4 * ch[(ik) + idl1 * (jc - 3)];
                     }
                 }
+
                 for (; j < ipph - 1; j += 2, jc -= 2)
                 {
                     iang += l; if (iang > ip) iang -= ip;
@@ -1110,6 +918,7 @@ namespace PocketFFT
                         cc[(ik) + idl1 * (lc)] += ai1 * ch[(ik) + idl1 * (jc)] + ai2 * ch[(ik) + idl1 * (jc - 1)];
                     }
                 }
+
                 for (; j < ipph; ++j, --jc)
                 {
                     iang += l; if (iang > ip) iang -= ip;
@@ -1139,7 +948,10 @@ namespace PocketFFT
                 }
             }
 
-            if (ido == 1) return;
+            if (ido == 1)
+            {
+                return;
+            }
 
             for (int j = 1, jc = ip - 1; j < ipph; ++j, --jc)  // 127
             {
@@ -1169,6 +981,165 @@ namespace PocketFFT
                         ch[(i) + ido * ((k) + l1 * (j))] = wa[idij] * t1 - wa[idij + 1] * t2;
                         ch[(i + 1) + ido * ((k) + l1 * (j))] = wa[idij] * t2 + wa[idij + 1] * t1;
                         idij += 2;
+                    }
+                }
+            }
+        }
+
+        private static void radfg(int ido, int ip, int l1, Span<double> cc, Span<double> ch, Span<double> wa, Span<double> csarr)
+        {
+            int cdim = ip;
+            int ipph = (ip + 1) / 2;
+            int idl1 = ido * l1;
+
+            if (ido > 1)
+            {
+                for (int j = 1, jc = ip - 1; j < ipph; ++j, --jc)              // 114
+                {
+                    int is1 = (j - 1) * (ido - 1),
+                        is2 = (jc - 1) * (ido - 1);
+
+                    for (int k = 0; k < l1; ++k)                            // 113
+                    {
+                        int idij = is1;
+                        int idij2 = is2;
+
+                        for (int i = 1; i <= ido - 2; i += 2)                      // 112
+                        {
+                            double t1 = cc[(i) + ido * ((k) + l1 * (j))], t2 = cc[(i + 1) + ido * ((k) + l1 * (j))],
+                                t3 = cc[(i) + ido * ((k) + l1 * (jc))], t4 = cc[(i + 1) + ido * ((k) + l1 * (jc))];
+                            double x1 = wa[idij] * t1 + wa[idij + 1] * t2,
+                                x2 = wa[idij] * t2 - wa[idij + 1] * t1,
+                                x3 = wa[idij2] * t3 + wa[idij2 + 1] * t4,
+                                x4 = wa[idij2] * t4 - wa[idij2 + 1] * t3;
+                            cc[(i) + ido * ((k) + l1 * (j))] = x1 + x3;
+                            cc[(i) + ido * ((k) + l1 * (jc))] = x2 - x4;
+                            cc[(i + 1) + ido * ((k) + l1 * (j))] = x2 + x4;
+                            cc[(i + 1) + ido * ((k) + l1 * (jc))] = x3 - x1;
+                            idij += 2;
+                            idij2 += 2;
+                        }
+                    }
+                }
+            }
+
+            for (int j = 1, jc = ip - 1; j < ipph; ++j, --jc)                // 123
+            {
+                for (int k = 0; k < l1; ++k)                              // 122
+                {
+                    int ikj = ido * ((k) + l1 * (j));
+                    int ikjc = ido * ((k) + l1 * (jc));
+                    double t1 = cc[ikj], t2 = cc[ikjc];
+                    cc[ikj] = t1 + t2;
+                    cc[ikjc] = t2 - t1;
+                }
+            }
+
+            //everything in C
+
+            for (int l = 1, lc = ip - 1; l < ipph; ++l, --lc)                 // 127
+            {
+                for (int ik = 0; ik < idl1; ++ik)                         // 124
+                {
+                    ch[(ik) + idl1 * (l)] = cc[(ik) + idl1 * (0)] + csarr[2 * l] * cc[(ik) + idl1 * (1)] + csarr[4 * l] * cc[(ik) + idl1 * (2)];
+                    ch[(ik) + idl1 * (lc)] = csarr[2 * l + 1] * cc[(ik) + idl1 * (ip - 1)] + csarr[4 * l + 1] * cc[(ik) + idl1 * (ip - 2)];
+                }
+
+                int iang = 2 * l;
+                int j = 3, jc = ip - 3;
+                for (; j < ipph - 3; j += 4, jc -= 4)              // 126
+                {
+                    iang += l; if (iang >= ip) iang -= ip;
+                    double ar1 = csarr[2 * iang], ai1 = csarr[2 * iang + 1];
+                    iang += l; if (iang >= ip) iang -= ip;
+                    double ar2 = csarr[2 * iang], ai2 = csarr[2 * iang + 1];
+                    iang += l; if (iang >= ip) iang -= ip;
+                    double ar3 = csarr[2 * iang], ai3 = csarr[2 * iang + 1];
+                    iang += l; if (iang >= ip) iang -= ip;
+                    double ar4 = csarr[2 * iang], ai4 = csarr[2 * iang + 1];
+                    for (int ik = 0; ik < idl1; ++ik)                       // 125
+                    {
+                        ch[(ik) + idl1 * (l)] += ar1 * cc[(ik) + idl1 * (j)] + ar2 * cc[(ik) + idl1 * (j + 1)]
+                            + ar3 * cc[(ik) + idl1 * (j + 2)] + ar4 * cc[(ik) + idl1 * (j + 3)];
+                        ch[(ik) + idl1 * (lc)] += ai1 * cc[(ik) + idl1 * (jc)] + ai2 * cc[(ik) + idl1 * (jc - 1)]
+                            + ai3 * cc[(ik) + idl1 * (jc - 2)] + ai4 * cc[(ik) + idl1 * (jc - 3)];
+                    }
+                }
+
+                for (; j < ipph - 1; j += 2, jc -= 2)              // 126
+                {
+                    iang += l; if (iang >= ip) iang -= ip;
+                    double ar1 = csarr[2 * iang], ai1 = csarr[2 * iang + 1];
+                    iang += l; if (iang >= ip) iang -= ip;
+                    double ar2 = csarr[2 * iang], ai2 = csarr[2 * iang + 1];
+                    for (int ik = 0; ik < idl1; ++ik)                       // 125
+                    {
+                        ch[(ik) + idl1 * (l)] += ar1 * cc[(ik) + idl1 * (j)] + ar2 * cc[(ik) + idl1 * (j + 1)];
+                        ch[(ik) + idl1 * (lc)] += ai1 * cc[(ik) + idl1 * (jc)] + ai2 * cc[(ik) + idl1 * (jc - 1)];
+                    }
+                }
+
+                for (; j < ipph; ++j, --jc)              // 126
+                {
+                    iang += l; if (iang >= ip) iang -= ip;
+                    double ar = csarr[2 * iang], ai = csarr[2 * iang + 1];
+                    for (int ik = 0; ik < idl1; ++ik)                       // 125
+                    {
+                        ch[(ik) + idl1 * (l)] += ar * cc[(ik) + idl1 * (j)];
+                        ch[(ik) + idl1 * (lc)] += ai * cc[(ik) + idl1 * (jc)];
+                    }
+                }
+            }
+
+            for (int ik = 0; ik < idl1; ++ik)                         // 101
+            {
+                ch[ik] = cc[ik];
+            }
+
+            for (int j = 1; j < ipph; ++j)                              // 129
+            {
+                for (int ik = 0; ik < idl1; ++ik)                         // 128
+                {
+                    ch[(ik) + idl1 * (0)] += cc[(ik) + idl1 * (j)];
+                }
+            }
+
+            // everything in CH at this point!
+
+            for (int k = 0; k < l1; ++k)                                // 131
+            {
+                for (int i = 0; i < ido; ++i)                             // 130
+                {
+                    cc[(i) + ido * ((0) + cdim * (k))] = ch[(i) + ido * ((k) + l1 * (0))];
+                }
+            }
+
+            for (int j = 1, jc = ip - 1; j < ipph; ++j, --jc)                // 137
+            {
+                int j2 = 2 * j - 1;
+                for (int k = 0; k < l1; ++k)                              // 136
+                {
+                    cc[(ido - 1) + ido * ((j2) + cdim * (k))] = ch[(0) + ido * ((k) + l1 * (j))];
+                    cc[(0) + ido * ((j2 + 1) + cdim * (k))] = ch[(0) + ido * ((k) + l1 * (jc))];
+                }
+            }
+
+            if (ido == 1)
+            {
+                return;
+            }
+
+            for (int j = 1, jc = ip - 1; j < ipph; ++j, --jc)                // 140
+            {
+                int j2 = 2 * j - 1;
+                for (int k = 0; k < l1; ++k)                               // 139
+                {
+                    for (int i = 1, ic = ido - i - 2; i <= ido - 2; i += 2, ic -= 2)      // 138
+                    {
+                        cc[(i) + ido * ((j2 + 1) + cdim * (k))] = ch[(i) + ido * ((k) + l1 * (j))] + ch[(i) + ido * ((k) + l1 * (jc))];
+                        cc[(ic) + ido * ((j2) + cdim * (k))] = ch[(i) + ido * ((k) + l1 * (j))] - ch[(i) + ido * ((k) + l1 * (jc))];
+                        cc[(i + 1) + ido * ((j2 + 1) + cdim * (k))] = ch[(i + 1) + ido * ((k) + l1 * (j))] + ch[(i + 1) + ido * ((k) + l1 * (jc))];
+                        cc[(ic + 1) + ido * ((j2) + cdim * (k))] = ch[(i + 1) + ido * ((k) + l1 * (jc))] - ch[(i + 1) + ido * ((k) + l1 * (j))];
                     }
                 }
             }

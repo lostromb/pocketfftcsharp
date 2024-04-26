@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Numerics;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using System.Text;
 
 namespace PocketFFT
@@ -25,9 +27,68 @@ namespace PocketFFT
                 return a.Length == 0;
             }
 
-            return Unsafe.AreSame(ref Unsafe.AsRef(a[0]), ref Unsafe.AsRef(b[0]));
+            return Unsafe.AreSame(
+                ref Unsafe.AsRef(in a[0]),
+                ref Unsafe.AsRef(in b[0]));
 
             //return a.Slice(0, 1).Overlaps(b.Slice(0, 1));
+        }
+
+        internal static void ScaleSpanInPlace(Span<cmplx> span, double scale)
+        {
+            ScaleSpanInPlace(MemoryMarshal.Cast<cmplx, double>(span), scale);
+        }
+
+        internal static void ScaleSpan(Span<cmplx> source, Span<cmplx> dest, double scale)
+        {
+            ScaleSpan(
+                MemoryMarshal.Cast<cmplx, double>(source),
+                MemoryMarshal.Cast<cmplx, double>(dest),
+                scale);
+        }
+
+        internal static void ScaleSpan(Span<double> source, Span<double> dest, double scale)
+        {
+            int idx = 0;
+            int endIdx = source.Length;
+#if NET6_0_OR_GREATER
+            if (Vector.IsHardwareAccelerated)
+            {
+                int vectorEndIdx = endIdx - (source.Length % Vector<double>.Count);
+                while (idx < vectorEndIdx)
+                {
+                    Vector.Multiply(new Vector<double>(source.Slice(idx, Vector<double>.Count)), scale).CopyTo(dest.Slice(idx, Vector<double>.Count));
+                    idx += Vector<double>.Count;
+                }
+            }
+#endif
+            for (; idx < endIdx; idx++)
+            {
+                dest[idx] = source[idx] * scale;
+            }
+        }
+
+        internal static void ScaleSpanInPlace(Span<double> span, double scale)
+        {
+            int idx = 0;
+            int endIdx = span.Length;
+#if NET6_0_OR_GREATER
+            if (Vector.IsHardwareAccelerated)
+            {
+                int vectorEndIdx = endIdx - (span.Length % Vector<double>.Count);
+                while (idx < vectorEndIdx)
+                {
+                    Span<double> slice = span.Slice(idx, Vector<double>.Count);
+                    Vector.Multiply(new Vector<double>(slice), scale).CopyTo(slice);
+                    idx += Vector<double>.Count;
+                }
+            }
+#endif
+
+            for (; idx < endIdx; idx++)
+            {
+                span[idx] *= scale;
+            }
         }
 
         //#define SWAP(a,b,type)

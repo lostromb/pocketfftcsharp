@@ -4,7 +4,7 @@ using System.Text;
 
 namespace PocketFFT
 {
-    public interface IFFTPlan : IDisposable
+    public interface I1DFFTPlan : IDisposable
     {
         int Length { get; }
     }

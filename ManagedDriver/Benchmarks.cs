@@ -14,11 +14,15 @@ namespace Driver
     [MemoryDiagnoser]
     public class Benchmarks
     {
-        private IRealFFTPlan _real;
-        private IComplexFFTPlan _complex;
+        private IReal1DFFTPlanFloat64 _real64;
+        private IReal1DFFTPlanFloat32 _real32;
+        private IComplex1DFFTPlanFloat64 _complex64;
+        private IComplex1DFFTPlanFloat32 _complex32;
 
-        private double[] _realInput;
-        private cmplx[] _complexInput;
+        private double[] _realInput64;
+        private float[] _realInput32;
+        private cmplx[] _complexInput64;
+        private cmplxF[] _complexInput32;
 
         [Params(64, 191, 1000, 2310, 5980)]
         public int TransformLength { get; set; }
@@ -26,35 +30,56 @@ namespace Driver
         [GlobalSetup]
         public void Setup()
         {
-            _realInput = new double[TransformLength * 2];
-            _real = FFTPlanFactory.Create1DRealFFTPlan(TransformLength);
-            _complexInput = new cmplx[TransformLength];
-            _complex = FFTPlanFactory.Create1DComplexFFTPlan(TransformLength);
+            _realInput64 = new double[TransformLength * 2];
+            _real64 = FFTPlanFactory.Create1DRealFFTPlanFloat64(TransformLength);
+            _realInput32 = new float[TransformLength * 2];
+            _real32 = FFTPlanFactory.Create1DRealFFTPlanFloat32(TransformLength);
+            _complexInput64 = new cmplx[TransformLength];
+            _complex64 = FFTPlanFactory.Create1DComplexFFTPlanFloat64(TransformLength);
+            _complexInput32 = new cmplxF[TransformLength];
+            _complex32 = FFTPlanFactory.Create1DComplexFFTPlanFloat32(TransformLength);
 
-            for (int c = 0; c < _realInput.Length; c++)
+            for (int c = 0; c < _realInput64.Length; c++)
             {
-                _realInput[c] = Random.Shared.NextDouble() - 0.5;
+                _realInput64[c] = Random.Shared.NextDouble() - 0.5;
+                _realInput32[c] = (float)_realInput64[c];
             }
 
-            for (int c = 0; c < _complexInput.Length; c++)
+            for (int c = 0; c < _complexInput64.Length; c++)
             {
-                _complexInput[c].r = Random.Shared.NextDouble() - 0.5;
-                _complexInput[c].i = Random.Shared.NextDouble() - 0.5;
+                _complexInput64[c].r = Random.Shared.NextDouble() - 0.5;
+                _complexInput64[c].i = Random.Shared.NextDouble() - 0.5;
+                _complexInput32[c].r = (float)_complexInput64[c].r;
+                _complexInput32[c].i = (float)_complexInput64[c].i;
             }
         }
 
         [Benchmark]
-        public void Real()
+        public void Real32()
         {
-            _real.Forward(_realInput.AsSpan(), 3.0);
-            _real.Backward(_realInput.AsSpan(), 3.0);
+            _real32.Forward(_realInput32.AsSpan(), 3.0f);
+            _real32.Backward(_realInput32.AsSpan(), 3.0f);
         }
 
         [Benchmark]
-        public void Complex()
+        public void Real64()
         {
-            _complex.Forward(_complexInput.AsSpan(), 3.0);
-            _complex.Backward(_complexInput.AsSpan(), 3.0);
+            _real64.Forward(_realInput64.AsSpan(), 3.0);
+            _real64.Backward(_realInput64.AsSpan(), 3.0);
+        }
+
+        [Benchmark]
+        public void Complex32()
+        {
+            _complex32.Forward(_complexInput32.AsSpan(), 3.0f);
+            _complex32.Backward(_complexInput32.AsSpan(), 3.0f);
+        }
+
+        [Benchmark]
+        public void Complex64()
+        {
+            _complex64.Forward(_complexInput64.AsSpan(), 3.0);
+            _complex64.Backward(_complexInput64.AsSpan(), 3.0);
         }
     }
 }

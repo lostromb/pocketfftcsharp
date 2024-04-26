@@ -1,17 +1,20 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Runtime.InteropServices;
-using System.Text;
+﻿#if NETCOREAPP
 
 namespace PocketFFT
 {
-#if NETCOREAPP
-    public class NativeRealFFTPlan : IRealFFTPlan
+    using Microsoft.Win32.SafeHandles;
+    using System;
+    using System.Collections.Generic;
+    using System.Reflection.Metadata;
+    using System.Runtime.InteropServices;
+    using System.Text;
+
+    public class PlanNativeRealFloat64 : IReal1DFFTPlanFloat64
     {
         private int _length;
-        private IntPtr _handle;
+        private NativePocketFFT.NativeRFFTPlanHandle _handle;
 
-        public NativeRealFFTPlan(int length)
+        public PlanNativeRealFloat64(int length)
         {
             _length = length;
             _handle = NativePocketFFT.make_rfft_plan(length);
@@ -29,7 +32,7 @@ namespace PocketFFT
 
         public void Dispose()
         {
-            NativePocketFFT.destroy_rfft_plan(_handle);
+            _handle.Dispose();
         }
 
         public unsafe void Forward(Span<double> c, double fct)
@@ -40,5 +43,6 @@ namespace PocketFFT
             }
         }
     }
-#endif
 }
+
+#endif

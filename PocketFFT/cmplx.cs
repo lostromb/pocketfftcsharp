@@ -15,4 +15,16 @@ namespace PocketFFT
             this.i = i;
         }
     }
+
+    public struct cmplxF
+    {
+        public float r;
+        public float i;
+
+        public cmplxF(float r, float i)
+        {
+            this.r = r;
+            this.i = i;
+        }
+    }
 }

@@ -15,11 +15,11 @@
   <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Release|net8.0|AnyCPU'" />
 
   <ItemGroup>
-    <None Remove="PocketFFT.dll" />
+    <None Remove="libpocketfft.dll" />
   </ItemGroup>
 
   <ItemGroup>
-    <Content Include="PocketFFT.dll">
+    <Content Include="libpocketfft.dll">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>

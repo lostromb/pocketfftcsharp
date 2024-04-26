@@ -11,7 +11,7 @@ namespace PocketFFT
     internal struct cfftp_fctdata
     {
         internal int fct;
-        internal int tw; // originally these were cmplx* pointers, but they just indexed into plan.mem
+        internal int tw; // originally these were cmplxF* pointers, but they just indexed into plan.mem
         internal int tws; // so they have been replaced by basic integer indexes
 
         internal cfftp_fctdata(int fct, int tw, int tws)
@@ -30,11 +30,11 @@ namespace PocketFFT
     }
 #endif
 
-    internal class ComplexFFTPackedPlan : IComplexFFTPlan
+    internal class PlanComplexPackedFloat32 : IComplex1DFFTPlanFloat32
     {
         internal int length;
         internal int nfct;
-        internal cmplx[] mem;
+        internal cmplxF[] mem;
 #if NET8_0_OR_GREATER
         internal cfftp_fctdata_array fct;
 #else
@@ -43,7 +43,7 @@ namespace PocketFFT
 
         public int Length => length;
 
-        public ComplexFFTPackedPlan(int length)
+        public PlanComplexPackedFloat32(int length)
         {
             if (length == 0)
             {
@@ -76,7 +76,7 @@ namespace PocketFFT
             }
 
             int tws = cfftp_twsize();
-            this.mem = ArrayPool<cmplx>.Shared.Rent(tws);
+            this.mem = ArrayPool<cmplxF>.Shared.Rent(tws);
 
             cfftp_comp_twiddle();
         }
@@ -85,16 +85,16 @@ namespace PocketFFT
         {
             if (this.mem != null)
             {
-                ArrayPool<cmplx>.Shared.Return(this.mem);
+                ArrayPool<cmplxF>.Shared.Return(this.mem);
             }
         }
 
-        public void Forward(Span<cmplx> c, double fct)
+        public void Forward(Span<cmplxF> c, float fct)
         {
             pass_all(c, fct, -1);
         }
 
-        public void Backward(Span<cmplx> c, double fct)
+        public void Backward(Span<cmplxF> c, float fct)
         {
             pass_all(c, fct, 1);
         }
@@ -127,7 +127,7 @@ namespace PocketFFT
                 Intrinsics.Swap(ref this.fct[0].fct, ref this.fct[nfct - 1].fct);
             }
 
-            int maxl = (int)(Math.Sqrt((double)length)) + 1;
+            int maxl = (int)(Math.Sqrt((float)length)) + 1;
             for (int divisor = 3; (length > 1) && (divisor < maxl); divisor += 2)
             {
                 if ((length % divisor) == 0)
@@ -143,7 +143,7 @@ namespace PocketFFT
                         length /= divisor;
                     }
 
-                    maxl = (int)(Math.Sqrt((double)length)) + 1;
+                    maxl = (int)(Math.Sqrt((float)length)) + 1;
                 }
             }
 
@@ -177,7 +177,7 @@ namespace PocketFFT
         private void cfftp_comp_twiddle()
         {
             int length = this.length;
-            Span<double> twid = new double[2 * length];
+            Span<float> twid = new float[2 * length];
             Intrinsics.sincos_2pibyn(length, twid);
             int l1 = 1;
             int memofs = 0;
@@ -185,7 +185,7 @@ namespace PocketFFT
             {
                 int ip = this.fct[k].fct, ido = length / (l1 * ip);
                 this.fct[k].tw = memofs;
-                Span<cmplx> tw = this.mem.AsSpan(memofs);
+                Span<cmplxF> tw = this.mem.AsSpan(memofs);
                 memofs += (ip - 1) * (ido - 1);
                 for (int j = 1; j < ip; ++j)
                 {
@@ -198,7 +198,7 @@ namespace PocketFFT
                 if (ip > 11)
                 {
                     this.fct[k].tws = memofs;
-                    Span<cmplx> tws = this.mem.AsSpan(memofs);
+                    Span<cmplxF> tws = this.mem.AsSpan(memofs);
                     memofs += ip;
                     for (int j = 0; j < ip; ++j)
                     {
@@ -210,7 +210,7 @@ namespace PocketFFT
             }
         }
 
-        private void pass_all(Span<cmplx> c, double fct, int sign)
+        private void pass_all(Span<cmplxF> c, float fct, int sign)
         {
             if (this.length == 1)
             {
@@ -219,10 +219,10 @@ namespace PocketFFT
 
             int len = this.length;
             int l1 = 1, nf = nfct;
-            cmplx[] scratchArray = ArrayPool<cmplx>.Shared.Rent(len);
-            Span<cmplx> ch = scratchArray;
-            Span<cmplx> p1 = c;
-            Span<cmplx> p2 = ch;
+            cmplxF[] scratchArray = ArrayPool<cmplxF>.Shared.Rent(len);
+            Span<cmplxF> ch = scratchArray;
+            Span<cmplxF> p1 = c;
+            Span<cmplxF> p2 = ch;
 
             for (int k1 = 0; k1 < nf; k1++)
             {
@@ -285,21 +285,21 @@ namespace PocketFFT
                 {
                     passg(ido, ip, l1, p1, p2, this.mem.AsSpan(this.fct[k1].tw), this.mem.AsSpan(this.fct[k1].tws), sign);
                     {
-                        Span<cmplx> tmp = p1;
+                        Span<cmplxF> tmp = p1;
                         p1 = p2;
                         p2 = tmp;
                     }
                 }
 
                 {
-                    Span<cmplx> tmp = p1;
+                    Span<cmplxF> tmp = p1;
                     p1 = p2;
                     p2 = tmp;
                 }
                 l1 = l2;
             }
 
-            if (!Intrinsics.SpanRefEquals(p1,c))
+            if (!Intrinsics.SpanRefEquals(p1, c))
             {
                 if (fct != 1.0)
                 {
@@ -318,10 +318,10 @@ namespace PocketFFT
                 }
             }
 
-            ArrayPool<cmplx>.Shared.Return(scratchArray);
+            ArrayPool<cmplxF>.Shared.Return(scratchArray);
         }
 
-        private static void pass2b(int ido, int l1, Span<cmplx> cc, Span<cmplx> ch, Span<cmplx> wa)
+        private static void pass2b(int ido, int l1, Span<cmplxF> cc, Span<cmplxF> ch, Span<cmplxF> wa)
         {
             const int cdim = 2;
 
@@ -348,7 +348,7 @@ namespace PocketFFT
 
                     for (int i = 1; i < ido; ++i)
                     {
-                        cmplx t = default;
+                        cmplxF t = default;
                         Intrinsics.PMC(
                             ref ch[(i) + ido * ((k) + l1 * (0))],
                             ref t,
@@ -363,7 +363,7 @@ namespace PocketFFT
             }
         }
 
-        private static void pass2f(int ido, int l1, Span<cmplx> cc, Span<cmplx> ch, Span<cmplx> wa)
+        private static void pass2f(int ido, int l1, Span<cmplxF> cc, Span<cmplxF> ch, Span<cmplxF> wa)
         {
             const int cdim = 2;
 
@@ -390,7 +390,7 @@ namespace PocketFFT
 
                     for (int i = 1; i < ido; ++i)
                     {
-                        cmplx t = default;
+                        cmplxF t = default;
                         Intrinsics.PMC(
                             ref ch[(i) + ido * ((k) + l1 * (0))],
                             ref t,
@@ -405,15 +405,15 @@ namespace PocketFFT
             }
         }
 
-        private static void pass3b(int ido, int l1, Span<cmplx> cc, Span<cmplx> ch, Span<cmplx> wa)
+        private static void pass3b(int ido, int l1, Span<cmplxF> cc, Span<cmplxF> ch, Span<cmplxF> wa)
         {
             const int cdim = 3;
-            const double tw1r = -0.5, tw1i = 0.86602540378443864676;
+            const float tw1r = -0.5f, tw1i = 0.86602540378443864676f;
             if (ido == 1)
             {
                 for (int k = 0; k < l1; ++k)
                 {
-                    cmplx t0 = cc[(0) + ido * ((0) + cdim * (k))],
+                    cmplxF t0 = cc[(0) + ido * ((0) + cdim * (k))],
                         t1 = default, t2 = default,
                         ca = default, cb = default;
                     Intrinsics.PMC(
@@ -435,7 +435,7 @@ namespace PocketFFT
             {
                 for (int k = 0; k < l1; ++k)
                 {
-                    cmplx t0 = cc[(0) + ido * ((0) + cdim * (k))],
+                    cmplxF t0 = cc[(0) + ido * ((0) + cdim * (k))],
                         t1 = default, t2 = default,
                         ca = default, cb = default,
                         da = default, db = default;
@@ -478,16 +478,16 @@ namespace PocketFFT
             }
         }
 
-        private static void pass3f(int ido, int l1, Span<cmplx> cc, Span<cmplx> ch, Span<cmplx> wa)
+        private static void pass3f(int ido, int l1, Span<cmplxF> cc, Span<cmplxF> ch, Span<cmplxF> wa)
         {
             const int cdim = 3;
-            const double tw1r = -0.5, tw1i = -0.86602540378443864676;
+            const float tw1r = -0.5f, tw1i = -0.86602540378443864676f;
 
             if (ido == 1)
             {
                 for (int k = 0; k < l1; ++k)
                 {
-                    cmplx t0 = cc[(0) + ido * ((0) + cdim * (k))],
+                    cmplxF t0 = cc[(0) + ido * ((0) + cdim * (k))],
                         t1 = default, t2 = default,
                         ca = default, cb = default;
                     Intrinsics.PMC(
@@ -509,7 +509,7 @@ namespace PocketFFT
             {
                 for (int k = 0; k < l1; ++k)
                 {
-                    cmplx t0 = cc[(0) + ido * ((0) + cdim * (k))],
+                    cmplxF t0 = cc[(0) + ido * ((0) + cdim * (k))],
                         t1 = default, t2 = default,
                         ca = default, cb = default,
                         da = default, db = default;
@@ -553,7 +553,7 @@ namespace PocketFFT
             }
         }
 
-        private static void pass4b(int ido, int l1, Span<cmplx> cc, Span<cmplx> ch, Span<cmplx> wa)
+        private static void pass4b(int ido, int l1, Span<cmplxF> cc, Span<cmplxF> ch, Span<cmplxF> wa)
         {
             const int cdim = 4;
 
@@ -561,7 +561,7 @@ namespace PocketFFT
             {
                 for (int k = 0; k < l1; ++k)
                 {
-                    cmplx t1 = default, t2 = default, t3 = default, t4 = default;
+                    cmplxF t1 = default, t2 = default, t3 = default, t4 = default;
                     Intrinsics.PMC(
                         ref t2,
                         ref t1,
@@ -589,7 +589,7 @@ namespace PocketFFT
             {
                 for (int k = 0; k < l1; ++k)
                 {
-                    cmplx t1 = default, t2 = default, t3 = default, t4 = default;
+                    cmplxF t1 = default, t2 = default, t3 = default, t4 = default;
                     Intrinsics.PMC(
                         ref t2,
                         ref t1,
@@ -614,15 +614,15 @@ namespace PocketFFT
 
                     for (int i = 1; i < ido; ++i)
                     {
-                        cmplx c2 = default, c3 = default, c4 = default;
-                        cmplx cc0 = cc[(i) + ido * ((0) + cdim * (k))],
+                        cmplxF c2 = default, c3 = default, c4 = default;
+                        cmplxF cc0 = cc[(i) + ido * ((0) + cdim * (k))],
                             cc1 = cc[(i) + ido * ((1) + cdim * (k))],
                             cc2 = cc[(i) + ido * ((2) + cdim * (k))],
                             cc3 = cc[(i) + ido * ((3) + cdim * (k))];
                         Intrinsics.PMC(ref t2, ref t1, ref cc0, ref cc2);
                         Intrinsics.PMC(ref t3, ref t4, ref cc1, ref cc3);
                         Intrinsics.ROT90(ref t4);
-                        cmplx wa0 = wa[(i) - 1 + (0) * (ido - 1)],
+                        cmplxF wa0 = wa[(i) - 1 + (0) * (ido - 1)],
                             wa1 = wa[(i) - 1 + (1) * (ido - 1)],
                             wa2 = wa[(i) - 1 + (2) * (ido - 1)];
                         Intrinsics.PMC(ref ch[(i) + ido * ((k) + l1 * (0))], ref c3, ref t2, ref t3);
@@ -635,7 +635,7 @@ namespace PocketFFT
             }
         }
 
-        private static void pass4f(int ido, int l1, Span<cmplx> cc, Span<cmplx> ch, Span<cmplx> wa)
+        private static void pass4f(int ido, int l1, Span<cmplxF> cc, Span<cmplxF> ch, Span<cmplxF> wa)
         {
             const int cdim = 4;
 
@@ -643,7 +643,7 @@ namespace PocketFFT
             {
                 for (int k = 0; k < l1; ++k)
                 {
-                    cmplx t1 = default, t2 = default, t3 = default, t4 = default;
+                    cmplxF t1 = default, t2 = default, t3 = default, t4 = default;
                     Intrinsics.PMC(
                         ref t2,
                         ref t1,
@@ -671,7 +671,7 @@ namespace PocketFFT
             {
                 for (int k = 0; k < l1; ++k)
                 {
-                    cmplx t1 = default, t2 = default, t3 = default, t4 = default;
+                    cmplxF t1 = default, t2 = default, t3 = default, t4 = default;
                     Intrinsics.PMC(
                         ref t2,
                         ref t1,
@@ -696,15 +696,15 @@ namespace PocketFFT
 
                     for (int i = 1; i < ido; ++i)
                     {
-                        cmplx c2 = default, c3 = default, c4 = default;
-                        cmplx cc0 = cc[(i) + ido * ((0) + cdim * (k))],
+                        cmplxF c2 = default, c3 = default, c4 = default;
+                        cmplxF cc0 = cc[(i) + ido * ((0) + cdim * (k))],
                             cc1 = cc[(i) + ido * ((1) + cdim * (k))],
                             cc2 = cc[(i) + ido * ((2) + cdim * (k))],
                             cc3 = cc[(i) + ido * ((3) + cdim * (k))];
                         Intrinsics.PMC(ref t2, ref t1, ref cc0, ref cc2);
                         Intrinsics.PMC(ref t3, ref t4, ref cc1, ref cc3);
                         Intrinsics.ROTM90(ref t4);
-                        cmplx wa0 = wa[(i) - 1 + (0) * (ido - 1)],
+                        cmplxF wa0 = wa[(i) - 1 + (0) * (ido - 1)],
                             wa1 = wa[(i) - 1 + (1) * (ido - 1)],
                             wa2 = wa[(i) - 1 + (2) * (ido - 1)];
                         Intrinsics.PMC(ref ch[(i) + ido * ((k) + l1 * (0))], ref c3, ref t2, ref t3);
@@ -717,20 +717,20 @@ namespace PocketFFT
             }
         }
 
-        private static void pass5b(int ido, int l1, Span<cmplx> cc, Span<cmplx> ch, Span<cmplx> wa)
+        private static void pass5b(int ido, int l1, Span<cmplxF> cc, Span<cmplxF> ch, Span<cmplxF> wa)
         {
             const int cdim = 5;
-            const double tw1r = 0.3090169943749474241,
-                tw1i = 0.95105651629515357212,
-                tw2r = -0.8090169943749474241,
-                tw2i = 0.58778525229247312917;
+            const float tw1r = 0.3090169943749474241f,
+                tw1i = 0.95105651629515357212f,
+                tw2r = -0.8090169943749474241f,
+                tw2i = 0.58778525229247312917f;
 
             if (ido == 1)
             {
                 for (int k = 0; k < l1; ++k)
                 {
-                    cmplx t0 = cc[(0) + ido * ((0) + cdim * (k))], t1 = default, t2 = default, t3 = default, t4 = default;
-                    cmplx ca = default, cb = default;
+                    cmplxF t0 = cc[(0) + ido * ((0) + cdim * (k))], t1 = default, t2 = default, t3 = default, t4 = default;
+                    cmplxF ca = default, cb = default;
                     Intrinsics.PMC(
                         ref t1,
                         ref t4,
@@ -741,7 +741,7 @@ namespace PocketFFT
                         ref t3,
                         ref cc[(0) + ido * ((2) + cdim * (k))],
                         ref cc[(0) + ido * ((3) + cdim * (k))]);
-                    ref cmplx z = ref ch[(0) + ido * ((k) + l1 * (0))];
+                    ref cmplxF z = ref ch[(0) + ido * ((k) + l1 * (0))];
                     z.r = t0.r + t1.r + t2.r;
                     z.i = t0.i + t1.i + t2.i;
 
@@ -772,8 +772,8 @@ namespace PocketFFT
             {
                 for (int k = 0; k < l1; ++k)
                 {
-                    cmplx t0 = cc[(0) + ido * ((0) + cdim * (k))], t1 = default, t2 = default, t3 = default, t4 = default;
-                    cmplx ca = default, cb = default;
+                    cmplxF t0 = cc[(0) + ido * ((0) + cdim * (k))], t1 = default, t2 = default, t3 = default, t4 = default;
+                    cmplxF ca = default, cb = default;
                     Intrinsics.PMC(
                         ref t1,
                         ref t4,
@@ -784,7 +784,7 @@ namespace PocketFFT
                         ref t3,
                         ref cc[(0) + ido * ((2) + cdim * (k))],
                         ref cc[(0) + ido * ((3) + cdim * (k))]);
-                    ref cmplx z = ref ch[(0) + ido * ((k) + l1 * (0))];
+                    ref cmplxF z = ref ch[(0) + ido * ((k) + l1 * (0))];
                     z.r = t0.r + t1.r + t2.r;
                     z.i = t0.i + t1.i + t2.i;
 
@@ -812,7 +812,7 @@ namespace PocketFFT
 
                     for (int i = 1; i < ido; ++i)
                     {
-                        cmplx da = default, db = default;
+                        cmplxF da = default, db = default;
                         t0 = cc[(i) + ido * ((0) + cdim * (k))];
                         Intrinsics.PMC(
                             ref t1,
@@ -858,20 +858,20 @@ namespace PocketFFT
             }
         }
 
-        static void pass5f(int ido, int l1, Span<cmplx> cc, Span<cmplx> ch, Span<cmplx> wa)
+        static void pass5f(int ido, int l1, Span<cmplxF> cc, Span<cmplxF> ch, Span<cmplxF> wa)
         {
             const int cdim = 5;
-            const double tw1r = 0.3090169943749474241,
-                tw1i = -0.95105651629515357212,
-                tw2r = -0.8090169943749474241,
-                tw2i = -0.58778525229247312917;
+            const float tw1r = 0.3090169943749474241f,
+                tw1i = -0.95105651629515357212f,
+                tw2r = -0.8090169943749474241f,
+                tw2i = -0.58778525229247312917f;
 
             if (ido == 1)
             {
                 for (int k = 0; k < l1; ++k)
                 {
-                    cmplx t0 = cc[(0) + ido * ((0) + cdim * (k))], t1 = default, t2 = default, t3 = default, t4 = default;
-                    cmplx ca = default, cb = default;
+                    cmplxF t0 = cc[(0) + ido * ((0) + cdim * (k))], t1 = default, t2 = default, t3 = default, t4 = default;
+                    cmplxF ca = default, cb = default;
                     Intrinsics.PMC(
                         ref t1,
                         ref t4,
@@ -882,7 +882,7 @@ namespace PocketFFT
                         ref t3,
                         ref cc[(0) + ido * ((2) + cdim * (k))],
                         ref cc[(0) + ido * ((3) + cdim * (k))]);
-                    ref cmplx z = ref ch[(0) + ido * ((k) + l1 * (0))];
+                    ref cmplxF z = ref ch[(0) + ido * ((k) + l1 * (0))];
                     z.r = t0.r + t1.r + t2.r;
                     z.i = t0.i + t1.i + t2.i;
 
@@ -913,8 +913,8 @@ namespace PocketFFT
             {
                 for (int k = 0; k < l1; ++k)
                 {
-                    cmplx t0 = cc[(0) + ido * ((0) + cdim * (k))], t1 = default, t2 = default, t3 = default, t4 = default;
-                    cmplx ca = default, cb = default;
+                    cmplxF t0 = cc[(0) + ido * ((0) + cdim * (k))], t1 = default, t2 = default, t3 = default, t4 = default;
+                    cmplxF ca = default, cb = default;
                     Intrinsics.PMC(
                         ref t1,
                         ref t4,
@@ -925,7 +925,7 @@ namespace PocketFFT
                         ref t3,
                         ref cc[(0) + ido * ((2) + cdim * (k))],
                         ref cc[(0) + ido * ((3) + cdim * (k))]);
-                    ref cmplx z = ref ch[(0) + ido * ((k) + l1 * (0))];
+                    ref cmplxF z = ref ch[(0) + ido * ((k) + l1 * (0))];
                     z.r = t0.r + t1.r + t2.r;
                     z.i = t0.i + t1.i + t2.i;
 
@@ -953,7 +953,7 @@ namespace PocketFFT
 
                     for (int i = 1; i < ido; ++i)
                     {
-                        cmplx da = default, db = default;
+                        cmplxF da = default, db = default;
                         t0 = cc[(i) + ido * ((0) + cdim * (k))];
                         Intrinsics.PMC(
                             ref t1,
@@ -1001,18 +1001,18 @@ namespace PocketFFT
             }
         }
 
-        private static void pass7(int ido, int l1, Span<cmplx> cc, Span<cmplx> ch, Span<cmplx> wa, int sign)
+        private static void pass7(int ido, int l1, Span<cmplxF> cc, Span<cmplxF> ch, Span<cmplxF> wa, int sign)
         {
             const int cdim = 7;
-            double tw1r = 0.623489801858733530525,
-                tw1i = sign * 0.7818314824680298087084,
-                tw2r = -0.222520933956314404289,
-                tw2i = sign * 0.9749279121818236070181,
-                tw3r = -0.9009688679024191262361,
-                tw3i = sign * 0.4338837391175581204758;
+            float tw1r = 0.623489801858733530525f,
+                tw1i = sign * 0.7818314824680298087084f,
+                tw2r = -0.222520933956314404289f,
+                tw2i = sign * 0.9749279121818236070181f,
+                tw3r = -0.9009688679024191262361f,
+                tw3i = sign * 0.4338837391175581204758f;
 
-            cmplx t1 = default, t2 = default, t3 = default, t4 = default, t5 = default, t6 = default, t7 = default;
-            cmplx ca = default, cb = default, da = default, db = default;
+            cmplxF t1 = default, t2 = default, t3 = default, t4 = default, t5 = default, t6 = default, t7 = default;
+            cmplxF ca = default, cb = default, da = default, db = default;
 
             if (ido == 1)
             {
@@ -1034,7 +1034,7 @@ namespace PocketFFT
                         ref t5,
                         ref cc[(0) + ido * ((3) + cdim * (k))],
                         ref cc[(0) + ido * ((4) + cdim * (k))]);
-                    ref cmplx z = ref ch[(0) + ido * ((k) + l1 * (0))];
+                    ref cmplxF z = ref ch[(0) + ido * ((k) + l1 * (0))];
                     z.r = t1.r + t2.r + t3.r + t4.r;
                     z.i = t1.i + t2.i + t3.i + t4.i;
                     ca.r = t1.r + tw1r * t2.r + tw2r * t3.r + tw3r * t4.r;
@@ -1086,7 +1086,7 @@ namespace PocketFFT
                         ref t5,
                         ref cc[(0) + ido * ((3) + cdim * (k))],
                         ref cc[(0) + ido * ((4) + cdim * (k))]);
-                    ref cmplx z = ref ch[(0) + ido * ((k) + l1 * (0))];
+                    ref cmplxF z = ref ch[(0) + ido * ((k) + l1 * (0))];
                     z.r = t1.r + t2.r + t3.r + t4.r;
                     z.i = t1.i + t2.i + t3.i + t4.i;
                     ca.r = t1.r + tw1r * t2.r + tw2r * t3.r + tw3r * t4.r;
@@ -1197,25 +1197,25 @@ namespace PocketFFT
             }
         }
 
-        private static void pass11(int ido, int l1, Span<cmplx> cc, Span<cmplx> ch, Span<cmplx> wa, int sign)
+        private static void pass11(int ido, int l1, Span<cmplxF> cc, Span<cmplxF> ch, Span<cmplxF> wa, int sign)
         {
             const int cdim = 11;
-            double tw1r = 0.8412535328311811688618,
-                tw1i = sign * 0.5406408174555975821076,
-                tw2r = 0.4154150130018864255293,
-                tw2i = sign * 0.9096319953545183714117,
-                tw3r = -0.1423148382732851404438,
-                tw3i = sign * 0.9898214418809327323761,
-                tw4r = -0.6548607339452850640569,
-                tw4i = sign * 0.755749574354258283774,
-                tw5r = -0.9594929736144973898904,
-                tw5i = sign * 0.2817325568414296977114;
+            float tw1r = 0.8412535328311811688618f,
+                tw1i = sign * 0.5406408174555975821076f,
+                tw2r = 0.4154150130018864255293f,
+                tw2i = sign * 0.9096319953545183714117f,
+                tw3r = -0.1423148382732851404438f,
+                tw3i = sign * 0.9898214418809327323761f,
+                tw4r = -0.6548607339452850640569f,
+                tw4i = sign * 0.755749574354258283774f,
+                tw5r = -0.9594929736144973898904f,
+                tw5i = sign * 0.2817325568414296977114f;
 
-            cmplx t1 = default, t2 = default, t3 = default, t4 = default, t5 = default, t6 = default, t7 = default, t8 = default, t9 = default, t10 = default, t11 = default;
-            cmplx ca = default, cb = default, da = default, db = default;
+            cmplxF t1 = default, t2 = default, t3 = default, t4 = default, t5 = default, t6 = default, t7 = default, t8 = default, t9 = default, t10 = default, t11 = default;
+            cmplxF ca = default, cb = default, da = default, db = default;
             if (ido == 1)
             {
-                for (int k = 0;k < l1; ++k)
+                for (int k = 0; k < l1; ++k)
                 {
                     t1 = cc[(0) + ido * ((0) + cdim * (k))];
 
@@ -1245,7 +1245,7 @@ namespace PocketFFT
                         ref cc[(0) + ido * ((5) + cdim * (k))],
                         ref cc[(0) + ido * ((6) + cdim * (k))]);
 
-                    ref cmplx z = ref ch[(0) + ido * ((k) + l1 * (0))];
+                    ref cmplxF z = ref ch[(0) + ido * ((k) + l1 * (0))];
                     z.r = t1.r + t2.r + t3.r + t4.r + t5.r + t6.r;
                     z.i = t1.i + t2.i + t3.i + t4.i + t5.i + t6.i;
 
@@ -1332,7 +1332,7 @@ namespace PocketFFT
                         ref cc[(0) + ido * ((5) + cdim * (k))],
                         ref cc[(0) + ido * ((6) + cdim * (k))]);
 
-                    ref cmplx z = ref ch[(0) + ido * ((k) + l1 * (0))];
+                    ref cmplxF z = ref ch[(0) + ido * ((k) + l1 * (0))];
                     z.r = t1.r + t2.r + t3.r + t4.r + t5.r + t6.r;
                     z.i = t1.i + t2.i + t3.i + t4.i + t5.i + t6.i;
 
@@ -1529,18 +1529,18 @@ namespace PocketFFT
             }
         }
 
-        private static void passg(int ido, int ip, int l1, Span<cmplx> cc, Span<cmplx> ch, Span<cmplx> wa, Span<cmplx> csarr, int sign)
+        private static void passg(int ido, int ip, int l1, Span<cmplxF> cc, Span<cmplxF> ch, Span<cmplxF> wa, Span<cmplxF> csarr, int sign)
         {
             int cdim = ip;
             int ipph = (ip + 1) / 2;
             int idl1 = ido * l1;
 
-            cmplx[] wal = ArrayPool<cmplx>.Shared.Rent(ip);
-            wal[0] = new cmplx(1.0, 0.0);
+            cmplxF[] wal = ArrayPool<cmplxF>.Shared.Rent(ip);
+            wal[0] = new cmplxF(1.0f, 0.0f);
 
             for (int i = 1; i < ip; ++i)
             {
-                wal[i] = new cmplx(csarr[i].r, sign * csarr[i].i);
+                wal[i] = new cmplxF(csarr[i].r, sign * csarr[i].i);
             }
 
             for (int k = 0; k < l1; ++k)
@@ -1570,10 +1570,10 @@ namespace PocketFFT
             {
                 for (int i = 0; i < ido; ++i)
                 {
-                    cmplx tmp = ch[(i) + ido * ((k) + l1 * (0))];
+                    cmplxF tmp = ch[(i) + ido * ((k) + l1 * (0))];
                     for (int j = 1; j < ipph; ++j)
                     {
-                        ref cmplx z = ref ch[(i) + ido * ((k) + l1 * (j))];
+                        ref cmplxF z = ref ch[(i) + ido * ((k) + l1 * (j))];
                         tmp.r += z.r;
                         tmp.i += z.i;
                     }
@@ -1612,14 +1612,14 @@ namespace PocketFFT
                         iwal -= ip;
                     }
 
-                    cmplx xwal = wal[iwal];
+                    cmplxF xwal = wal[iwal];
                     iwal += l;
                     if (iwal > ip)
                     {
                         iwal -= ip;
                     }
 
-                    cmplx xwal2 = wal[iwal];
+                    cmplxF xwal2 = wal[iwal];
                     for (int ik = 0; ik < idl1; ++ik)
                     {
                         Intrinsics.PASSG3(
@@ -1645,17 +1645,17 @@ namespace PocketFFT
                         iwal -= ip;
                     }
 
-                    cmplx xwal = wal[iwal];
+                    cmplxF xwal = wal[iwal];
                     for (int ik = 0; ik < idl1; ++ik)
                     {
-                        Intrinsics.PASSG5(ref cc[(ik) + idl1 * (l)],  ref ch[(ik) + idl1 * (j)],  ref xwal);
+                        Intrinsics.PASSG5(ref cc[(ik) + idl1 * (l)], ref ch[(ik) + idl1 * (j)], ref xwal);
                         Intrinsics.PASSG6(ref cc[(ik) + idl1 * (lc)], ref ch[(ik) + idl1 * (jc)], ref xwal);
                     }
                 }
             }
 
-            ArrayPool<cmplx>.Shared.Return(wal);
-            cmplx t1, t2;
+            ArrayPool<cmplxF>.Shared.Return(wal);
+            cmplxF t1, t2;
 
             // shuffling and twiddling
             if (ido == 1)

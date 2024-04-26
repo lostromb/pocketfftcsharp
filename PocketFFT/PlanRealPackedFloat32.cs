@@ -7,7 +7,7 @@ using System.Text;
 
 namespace PocketFFT
 {
-    internal class RealFFTPackedPlan : IRealFFTPlan
+    internal class PlanRealPackedFloat32 : IReal1DFFTPlanFloat32
     {
         internal struct rfftp_fctdata
         {
@@ -25,7 +25,7 @@ namespace PocketFFT
 
         internal int length;
         internal int nfct;
-        internal double[] mem;
+        internal float[] mem;
 #if NET8_0_OR_GREATER
         [System.Runtime.CompilerServices.InlineArray(Constants.NFCT)]
         internal struct rfftp_fctdata_array
@@ -40,7 +40,7 @@ namespace PocketFFT
 
         public int Length => length;
 
-        public RealFFTPackedPlan(int length)
+        public PlanRealPackedFloat32(int length)
         {
             if (length == 0)
             {
@@ -73,16 +73,16 @@ namespace PocketFFT
             }
 
             int tws = rfftp_twsize();
-            this.mem = ArrayPool<double>.Shared.Rent(tws);
+            this.mem = ArrayPool<float>.Shared.Rent(tws);
             rfftp_comp_twiddle();
         }
 
-        public void Forward(Span<double> c, double fct)
+        public void Forward(Span<float> c, float fct)
         {
             rfftp_forward(this, c, fct);
         }
 
-        public void Backward(Span<double> c, double fct)
+        public void Backward(Span<float> c, float fct)
         {
             rfftp_backward(this, c, fct);
         }
@@ -91,11 +91,11 @@ namespace PocketFFT
         {
             if (this.mem != null)
             {
-                ArrayPool<double>.Shared.Return(this.mem);
+                ArrayPool<float>.Shared.Return(this.mem);
             }
         }
 
-        private static void rfftp_forward(RealFFTPackedPlan plan, Span<double> c, double fct)
+        private static void rfftp_forward(PlanRealPackedFloat32 plan, Span<float> c, float fct)
         {
             if (plan.length == 1)
             {
@@ -104,16 +104,16 @@ namespace PocketFFT
 
             int n = plan.length;
             int l1 = n, nf = plan.nfct;
-            double[] scratch = null;
+            float[] scratch = null;
             bool doStackAlloc = n <= Constants.STACKALLOC_DOUBLE_LIMIT;
             if (!doStackAlloc)
             {
-                scratch = ArrayPool<double>.Shared.Rent(n);
+                scratch = ArrayPool<float>.Shared.Rent(n);
             }
 
-            Span<double> ch = doStackAlloc ? stackalloc double[n] : scratch;
-            Span<double> p1 = c;
-            Span<double> p2 = ch;
+            Span<float> ch = doStackAlloc ? stackalloc float[n] : scratch;
+            Span<float> p1 = c;
+            Span<float> p2 = ch;
             bool swapped = false;
 
             for (int k1 = 0; k1 < nf; ++k1)
@@ -178,11 +178,11 @@ namespace PocketFFT
 
             if (scratch != null)
             {
-                ArrayPool<double>.Shared.Return(scratch);
+                ArrayPool<float>.Shared.Return(scratch);
             }
         }
 
-        private static void rfftp_backward(RealFFTPackedPlan plan, Span<double> c, double fct)
+        private static void rfftp_backward(PlanRealPackedFloat32 plan, Span<float> c, float fct)
         {
             if (plan.length == 1)
             {
@@ -191,16 +191,16 @@ namespace PocketFFT
 
             int n = plan.length;
             int l1 = 1, nf = plan.nfct;
-            double[] scratch = null;
+            float[] scratch = null;
             bool doStackAlloc = n <= Constants.STACKALLOC_DOUBLE_LIMIT;
             if (!doStackAlloc)
             {
-                scratch = ArrayPool<double>.Shared.Rent(n);
+                scratch = ArrayPool<float>.Shared.Rent(n);
             }
 
-            Span<double> ch = doStackAlloc ? stackalloc double[n] : scratch;
-            Span<double> p1 = c;
-            Span<double> p2 = ch;
+            Span<float> ch = doStackAlloc ? stackalloc float[n] : scratch;
+            Span<float> p1 = c;
+            Span<float> p2 = ch;
             bool swapped = false;
 
             for (int k = 0; k < nf; k++)
@@ -263,11 +263,11 @@ namespace PocketFFT
 
             if (scratch != null)
             {
-                ArrayPool<double>.Shared.Return(scratch);
+                ArrayPool<float>.Shared.Return(scratch);
             }
         }
 
-        private static void copy_and_norm(Span<double> c, Span<double> p1, int n, double fct)
+        private static void copy_and_norm(Span<float> c, Span<float> p1, int n, float fct)
         {
             if (!Intrinsics.SpanRefEquals(p1, c))
             {
@@ -316,7 +316,7 @@ namespace PocketFFT
                 Intrinsics.Swap(ref this.fct[0].fct, ref this.fct[nfct - 1].fct);
             }
 
-            int maxl = (int)(Math.Sqrt((double)length)) + 1;
+            int maxl = (int)(Math.Sqrt((float)length)) + 1;
             for (int divisor = 3; (length > 1) && (divisor < maxl); divisor += 2)
             {
                 if ((length % divisor) == 0)
@@ -331,7 +331,7 @@ namespace PocketFFT
                         this.fct[nfct++].fct = divisor;
                         length /= divisor;
                     }
-                    maxl = (int)(Math.Sqrt((double)length)) + 1;
+                    maxl = (int)(Math.Sqrt((float)length)) + 1;
                 }
             }
             if (length > 1)
@@ -360,7 +360,7 @@ namespace PocketFFT
         private void rfftp_comp_twiddle()
         {
             int length = this.length;
-            double[] twid = new double[2 * length];
+            float[] twid = new float[2 * length];
             Intrinsics.sincos_2pibyn_half(length, twid);
             int l1 = 1;
             int ptr = 0;
@@ -370,7 +370,7 @@ namespace PocketFFT
                 if (k < this.nfct - 1) // last factor doesn't need twiddles
                 {
                     this.fct[k].tw = ptr;
-                    Span<double> tw = this.mem.AsSpan(ptr);
+                    Span<float> tw = this.mem.AsSpan(ptr);
                     ptr += (ip - 1) * (ido - 1);
                     for (int j = 1; j < ip; ++j)
                     {
@@ -385,10 +385,10 @@ namespace PocketFFT
                 if (ip > 5) // special factors required by *g functions
                 {
                     this.fct[k].tws = ptr;
-                    Span<double> tws = this.mem.AsSpan(ptr);
+                    Span<float> tws = this.mem.AsSpan(ptr);
                     ptr += 2 * ip;
-                    tws[0] = 1.0;
-                    tws[1] = 0.0;
+                    tws[0] = 1.0f;
+                    tws[1] = 0.0f;
                     for (int i = 1; i <= (ip >> 1); ++i)
                     {
                         tws[2 * i] = twid[2 * i * (length / ip)];
@@ -402,7 +402,7 @@ namespace PocketFFT
             }
         }
 
-        private static void radf2(int ido, int l1, Span<double> cc, Span<double> ch, Span<double> wa)
+        private static void radf2(int ido, int l1, Span<float> cc, Span<float> ch, Span<float> wa)
         {
             const int cdim = 2;
 
@@ -431,7 +431,7 @@ namespace PocketFFT
                 for (int i = 2; i < ido; i += 2)
                 {
                     int ic = ido - i;
-                    double tr2, ti2;
+                    float tr2, ti2;
                     tr2 = wa[(i - 2) + (0) * (ido - 1)] * cc[(i - 1) + ido * ((k) + l1 * (1))] + wa[(i - 1) + (0) * (ido - 1)] * cc[(i) + ido * ((k) + l1 * (1))];
                     ti2 = wa[(i - 2) + (0) * (ido - 1)] * cc[(i) + ido * ((k) + l1 * (1))] - wa[(i - 1) + (0) * (ido - 1)] * cc[(i - 1) + ido * ((k) + l1 * (1))];
                     ch[(i - 1) + ido * ((0) + cdim * (k))] = cc[(i - 1) + ido * ((k) + l1 * (0))] + tr2;
@@ -442,7 +442,7 @@ namespace PocketFFT
             }
         }
 
-        private static void radb2(int ido, int l1, Span<double> cc, Span<double> ch, Span<double> wa)
+        private static void radb2(int ido, int l1, Span<float> cc, Span<float> ch, Span<float> wa)
         {
             const int cdim = 2;
 
@@ -455,8 +455,8 @@ namespace PocketFFT
             {
                 for (int k = 0; k < l1; k++)
                 {
-                    ch[(ido - 1) + ido * ((k) + l1 * (0))] = 2.0 * cc[(ido - 1) + ido * ((0) + cdim * (k))];
-                    ch[(ido - 1) + ido * ((k) + l1 * (1))] = -2.0 * cc[(0) + ido * ((1) + cdim * (k))];
+                    ch[(ido - 1) + ido * ((k) + l1 * (0))] = 2.0f * cc[(ido - 1) + ido * ((0) + cdim * (k))];
+                    ch[(ido - 1) + ido * ((k) + l1 * (1))] = -2.0f * cc[(0) + ido * ((1) + cdim * (k))];
                 }
             }
 
@@ -470,7 +470,7 @@ namespace PocketFFT
                 for (int i = 2; i < ido; i += 2)
                 {
                     int ic = ido - i;
-                    double ti2, tr2;
+                    float ti2, tr2;
                     ch[(i - 1) + ido * ((k) + l1 * (0))] = cc[(i - 1) + ido * ((0) + cdim * (k))] + cc[(ic - 1) + ido * ((1) + cdim * (k))];
                     tr2 = cc[(i - 1) + ido * ((0) + cdim * (k))] - cc[(ic - 1) + ido * ((1) + cdim * (k))];
                     ti2 = cc[(i) + ido * ((0) + cdim * (k))] + cc[(ic) + ido * ((1) + cdim * (k))];
@@ -481,17 +481,17 @@ namespace PocketFFT
             }
         }
 
-        private static void radb3(int ido, int l1, Span<double> cc, Span<double> ch, Span<double> wa)
+        private static void radb3(int ido, int l1, Span<float> cc, Span<float> ch, Span<float> wa)
         {
             const int cdim = 3;
-            const double taur = -0.5, taui = 0.86602540378443864676;
+            const float taur = -0.5f, taui = 0.86602540378443864676f;
 
             for (int k = 0; k < l1; k++)
             {
-                double tr2 = 2.0 * cc[(ido - 1) + ido * ((1) + cdim * (k))];
-                double cr2 = cc[(0) + ido * ((0) + cdim * (k))] + taur * tr2;
+                float tr2 = 2.0f * cc[(ido - 1) + ido * ((1) + cdim * (k))];
+                float cr2 = cc[(0) + ido * ((0) + cdim * (k))] + taur * tr2;
                 ch[(0) + ido * ((k) + l1 * (0))] = cc[(0) + ido * ((0) + cdim * (k))] + tr2;
-                double ci3 = 2.0 * taui * cc[(0) + ido * ((2) + cdim * (k))];
+                float ci3 = 2.0f * taui * cc[(0) + ido * ((2) + cdim * (k))];
                 { ch[(0) + ido * ((k) + l1 * (2))] = cr2 + ci3; ch[(0) + ido * ((k) + l1 * (1))] = cr2 - ci3; };
             }
 
@@ -505,18 +505,18 @@ namespace PocketFFT
                 for (int i = 2; i < ido; i += 2)
                 {
                     int ic = ido - i;
-                    double tr2 = cc[(i - 1) + ido * ((2) + cdim * (k))] + cc[(ic - 1) + ido * ((1) + cdim * (k))]; // t2=CC(I) + conj(CC(ic))
-                    double ti2 = cc[(i) + ido * ((2) + cdim * (k))] - cc[(ic) + ido * ((1) + cdim * (k))];
-                    double cr2 = cc[(i - 1) + ido * ((0) + cdim * (k))] + taur * tr2;     // c2=CC +taur*t2
-                    double ci2 = cc[(i) + ido * ((0) + cdim * (k))] + taur * ti2;
+                    float tr2 = cc[(i - 1) + ido * ((2) + cdim * (k))] + cc[(ic - 1) + ido * ((1) + cdim * (k))]; // t2=CC(I) + conj(CC(ic))
+                    float ti2 = cc[(i) + ido * ((2) + cdim * (k))] - cc[(ic) + ido * ((1) + cdim * (k))];
+                    float cr2 = cc[(i - 1) + ido * ((0) + cdim * (k))] + taur * tr2;     // c2=CC +taur*t2
+                    float ci2 = cc[(i) + ido * ((0) + cdim * (k))] + taur * ti2;
                     ch[(i - 1) + ido * ((k) + l1 * (0))] = cc[(i - 1) + ido * ((0) + cdim * (k))] + tr2;         // CH=CC+t2
                     ch[(i) + ido * ((k) + l1 * (0))] = cc[(i) + ido * ((0) + cdim * (k))] + ti2;
-                    double cr3 = taui * (cc[(i - 1) + ido * ((2) + cdim * (k))] - cc[(ic - 1) + ido * ((1) + cdim * (k))]);// c3=taui*(CC(i)-conj(CC(ic)))
-                    double ci3 = taui * (cc[(i) + ido * ((2) + cdim * (k))] + cc[(ic) + ido * ((1) + cdim * (k))]);
-                    double dr3 = cr2 + ci3;
-                    double dr2 = cr2 - ci3; // d2= (cr2-ci3, ci2+cr3) = c2+i*c3
-                    double di2 = ci2 + cr3;
-                    double di3 = ci2 - cr3; // d3= (cr2+ci3, ci2-cr3) = c2-i*c3
+                    float cr3 = taui * (cc[(i - 1) + ido * ((2) + cdim * (k))] - cc[(ic - 1) + ido * ((1) + cdim * (k))]);// c3=taui*(CC(i)-conj(CC(ic)))
+                    float ci3 = taui * (cc[(i) + ido * ((2) + cdim * (k))] + cc[(ic) + ido * ((1) + cdim * (k))]);
+                    float dr3 = cr2 + ci3;
+                    float dr2 = cr2 - ci3; // d2= (cr2-ci3, ci2+cr3) = c2+i*c3
+                    float di2 = ci2 + cr3;
+                    float di3 = ci2 - cr3; // d3= (cr2+ci3, ci2-cr3) = c2-i*c3
                     ch[(i) + ido * ((k) + l1 * (1))] = wa[(i - 2) + (0) * (ido - 1)] * di2 + wa[(i - 1) + (0) * (ido - 1)] * dr2;
                     ch[(i - 1) + ido * ((k) + l1 * (1))] = wa[(i - 2) + (0) * (ido - 1)] * dr2 - wa[(i - 1) + (0) * (ido - 1)] * di2; // ch = WA*d2
                     ch[(i) + ido * ((k) + l1 * (2))] = wa[(i - 2) + (1) * (ido - 1)] * di3 + wa[(i - 1) + (1) * (ido - 1)] * dr3;
@@ -525,14 +525,14 @@ namespace PocketFFT
             }
         }
 
-        private static void radf3(int ido, int l1, Span<double> cc, Span<double> ch, Span<double> wa)
+        private static void radf3(int ido, int l1, Span<float> cc, Span<float> ch, Span<float> wa)
         {
             const int cdim = 3;
-            const double taur = -0.5, taui = 0.86602540378443864676;
+            const float taur = -0.5f, taui = 0.86602540378443864676f;
 
             for (int k = 0; k < l1; k++)
             {
-                double cr2 = cc[(0) + ido * ((k) + l1 * (1))] + cc[(0) + ido * ((k) + l1 * (2))];
+                float cr2 = cc[(0) + ido * ((k) + l1 * (1))] + cc[(0) + ido * ((k) + l1 * (2))];
                 ch[(0) + ido * ((0) + cdim * (k))] = cc[(0) + ido * ((k) + l1 * (0))] + cr2;
                 ch[(0) + ido * ((2) + cdim * (k))] = taui * (cc[(0) + ido * ((k) + l1 * (2))] - cc[(0) + ido * ((k) + l1 * (1))]);
                 ch[(ido - 1) + ido * ((1) + cdim * (k))] = cc[(0) + ido * ((k) + l1 * (0))] + taur * cr2;
@@ -548,19 +548,19 @@ namespace PocketFFT
                 for (int i = 2; i < ido; i += 2)
                 {
                     int ic = ido - i;
-                    double di2, di3, dr2, dr3;
+                    float di2, di3, dr2, dr3;
                     dr2 = wa[(i - 2) + (0) * (ido - 1)] * cc[(i - 1) + ido * ((k) + l1 * (1))] + wa[(i - 1) + (0) * (ido - 1)] * cc[(i) + ido * ((k) + l1 * (1))];
                     di2 = wa[(i - 2) + (0) * (ido - 1)] * cc[(i) + ido * ((k) + l1 * (1))] - wa[(i - 1) + (0) * (ido - 1)] * cc[(i - 1) + ido * ((k) + l1 * (1))]; // d2=conj(WA0)*CC1
                     dr3 = wa[(i - 2) + (1) * (ido - 1)] * cc[(i - 1) + ido * ((k) + l1 * (2))] + wa[(i - 1) + (1) * (ido - 1)] * cc[(i) + ido * ((k) + l1 * (2))];
                     di3 = wa[(i - 2) + (1) * (ido - 1)] * cc[(i) + ido * ((k) + l1 * (2))] - wa[(i - 1) + (1) * (ido - 1)] * cc[(i - 1) + ido * ((k) + l1 * (2))]; // d3=conj(WA1)*CC2
-                    double cr2 = dr2 + dr3; // c add
-                    double ci2 = di2 + di3;
+                    float cr2 = dr2 + dr3; // c add
+                    float ci2 = di2 + di3;
                     ch[(i - 1) + ido * ((0) + cdim * (k))] = cc[(i - 1) + ido * ((k) + l1 * (0))] + cr2; // c add
                     ch[(i) + ido * ((0) + cdim * (k))] = cc[(i) + ido * ((k) + l1 * (0))] + ci2;
-                    double tr2 = cc[(i - 1) + ido * ((k) + l1 * (0))] + taur * cr2; // c add
-                    double ti2 = cc[(i) + ido * ((k) + l1 * (0))] + taur * ci2;
-                    double tr3 = taui * (di2 - di3);  // t3 = taui*i*(d3-d2)?
-                    double ti3 = taui * (dr3 - dr2);
+                    float tr2 = cc[(i - 1) + ido * ((k) + l1 * (0))] + taur * cr2; // c add
+                    float ti2 = cc[(i) + ido * ((k) + l1 * (0))] + taur * ci2;
+                    float tr3 = taui * (di2 - di3);  // t3 = taui*i*(d3-d2)?
+                    float ti3 = taui * (dr3 - dr2);
                     ch[(i - 1) + ido * ((2) + cdim * (k))] = tr2 + tr3;
                     ch[(ic - 1) + ido * ((1) + cdim * (k))] = tr2 - tr3; // PM(i) = t2+t3
                     ch[(i) + ido * ((2) + cdim * (k))] = ti3 + ti2;
@@ -569,18 +569,18 @@ namespace PocketFFT
             }
         }
 
-        private static void radb4(int ido, int l1, Span<double> cc, Span<double> ch, Span<double> wa)
+        private static void radb4(int ido, int l1, Span<float> cc, Span<float> ch, Span<float> wa)
         {
             const int cdim = 4;
-            const double sqrt2 = 1.41421356237309504880;
+            const float sqrt2 = 1.41421356237309504880f;
 
             for (int k = 0; k < l1; k++)
             {
-                double tr1, tr2;
+                float tr1, tr2;
                 tr2 = cc[(0) + ido * ((0) + cdim * (k))] + cc[(ido - 1) + ido * ((3) + cdim * (k))];
                 tr1 = cc[(0) + ido * ((0) + cdim * (k))] - cc[(ido - 1) + ido * ((3) + cdim * (k))];
-                double tr3 = 2.0 * cc[(ido - 1) + ido * ((1) + cdim * (k))];
-                double tr4 = 2.0 * cc[(0) + ido * ((2) + cdim * (k))];
+                float tr3 = 2.0f * cc[(ido - 1) + ido * ((1) + cdim * (k))];
+                float tr4 = 2.0f * cc[(0) + ido * ((2) + cdim * (k))];
                 ch[(0) + ido * ((k) + l1 * (0))] = tr2 + tr3;
                 ch[(0) + ido * ((k) + l1 * (2))] = tr2 - tr3;
                 ch[(0) + ido * ((k) + l1 * (3))] = tr1 + tr4;
@@ -590,7 +590,7 @@ namespace PocketFFT
             {
                 for (int k = 0; k < l1; k++)
                 {
-                    double tr1, tr2, ti1, ti2;
+                    float tr1, tr2, ti1, ti2;
                     ti1 = cc[(0) + ido * ((3) + cdim * (k))] + cc[(0) + ido * ((1) + cdim * (k))];
                     ti2 = cc[(0) + ido * ((3) + cdim * (k))] - cc[(0) + ido * ((1) + cdim * (k))];
                     tr2 = cc[(ido - 1) + ido * ((0) + cdim * (k))] + cc[(ido - 1) + ido * ((2) + cdim * (k))];
@@ -611,7 +611,7 @@ namespace PocketFFT
             {
                 for (int i = 2; i < ido; i += 2)
                 {
-                    double ci2, ci3, ci4, cr2, cr3, cr4, ti1, ti2, ti3, ti4, tr1, tr2, tr3, tr4;
+                    float ci2, ci3, ci4, cr2, cr3, cr4, ti1, ti2, ti3, ti4, tr1, tr2, tr3, tr4;
                     int ic = ido - i;
                     tr2 = cc[(i - 1) + ido * ((0) + cdim * (k))] + cc[(ic - 1) + ido * ((3) + cdim * (k))];
                     tr1 = cc[(i - 1) + ido * ((0) + cdim * (k))] - cc[(ic - 1) + ido * ((3) + cdim * (k))];
@@ -637,14 +637,14 @@ namespace PocketFFT
             }
         }
 
-        private static void radf4(int ido, int l1, Span<double> cc, Span<double> ch, Span<double> wa)
+        private static void radf4(int ido, int l1, Span<float> cc, Span<float> ch, Span<float> wa)
         {
             const int cdim = 4;
-            const double hsqt2 = 0.70710678118654752440;
+            const float hsqt2 = 0.70710678118654752440f;
 
             for (int k = 0; k < l1; k++)
             {
-                double tr1, tr2;
+                float tr1, tr2;
                 tr1 = cc[(0) + ido * ((k) + l1 * (3))] + cc[(0) + ido * ((k) + l1 * (1))];
                 ch[(0) + ido * ((2) + cdim * (k))] = cc[(0) + ido * ((k) + l1 * (3))] - cc[(0) + ido * ((k) + l1 * (1))];
                 tr2 = cc[(0) + ido * ((k) + l1 * (0))] + cc[(0) + ido * ((k) + l1 * (2))];
@@ -657,8 +657,8 @@ namespace PocketFFT
             {
                 for (int k = 0; k < l1; k++)
                 {
-                    double ti1 = -hsqt2 * (cc[(ido - 1) + ido * ((k) + l1 * (1))] + cc[(ido - 1) + ido * ((k) + l1 * (3))]);
-                    double tr1 = hsqt2 * (cc[(ido - 1) + ido * ((k) + l1 * (1))] - cc[(ido - 1) + ido * ((k) + l1 * (3))]);
+                    float ti1 = -hsqt2 * (cc[(ido - 1) + ido * ((k) + l1 * (1))] + cc[(ido - 1) + ido * ((k) + l1 * (3))]);
+                    float tr1 = hsqt2 * (cc[(ido - 1) + ido * ((k) + l1 * (1))] - cc[(ido - 1) + ido * ((k) + l1 * (3))]);
                     ch[(ido - 1) + ido * ((0) + cdim * (k))] = cc[(ido - 1) + ido * ((k) + l1 * (0))] + tr1;
                     ch[(ido - 1) + ido * ((2) + cdim * (k))] = cc[(ido - 1) + ido * ((k) + l1 * (0))] - tr1;
                     ch[(0) + ido * ((3) + cdim * (k))] = ti1 + cc[(ido - 1) + ido * ((k) + l1 * (2))];
@@ -676,7 +676,7 @@ namespace PocketFFT
                 for (int i = 2; i < ido; i += 2)
                 {
                     int ic = ido - i;
-                    double ci2, ci3, ci4, cr2, cr3, cr4, ti1, ti2, ti3, ti4, tr1, tr2, tr3, tr4;
+                    float ci2, ci3, ci4, cr2, cr3, cr4, ti1, ti2, ti3, ti4, tr1, tr2, tr3, tr4;
                     cr2 = wa[(i - 2) + (0) * (ido - 1)] * cc[(i - 1) + ido * ((k) + l1 * (1))] + wa[(i - 1) + (0) * (ido - 1)] * cc[(i) + ido * ((k) + l1 * (1))];
                     ci2 = wa[(i - 2) + (0) * (ido - 1)] * cc[(i) + ido * ((k) + l1 * (1))] - wa[(i - 1) + (0) * (ido - 1)] * cc[(i - 1) + ido * ((k) + l1 * (1))];
                     cr3 = wa[(i - 2) + (1) * (ido - 1)] * cc[(i - 1) + ido * ((k) + l1 * (2))] + wa[(i - 1) + (1) * (ido - 1)] * cc[(i) + ido * ((k) + l1 * (2))];
@@ -699,22 +699,22 @@ namespace PocketFFT
             }
         }
 
-        private static void radb5(int ido, int l1, Span<double> cc, Span<double> ch, Span<double> wa)
+        private static void radb5(int ido, int l1, Span<float> cc, Span<float> ch, Span<float> wa)
         {
             const int cdim = 5;
-            const double tr11 = 0.3090169943749474241, ti11 = 0.95105651629515357212,
-                tr12 = -0.8090169943749474241, ti12 = 0.58778525229247312917;
+            const float tr11 = 0.3090169943749474241f, ti11 = 0.95105651629515357212f,
+                tr12 = -0.8090169943749474241f, ti12 = 0.58778525229247312917f;
 
             for (int k = 0; k < l1; k++)
             {
-                double ti5 = cc[(0) + ido * ((2) + cdim * (k))] + cc[(0) + ido * ((2) + cdim * (k))];
-                double ti4 = cc[(0) + ido * ((4) + cdim * (k))] + cc[(0) + ido * ((4) + cdim * (k))];
-                double tr2 = cc[(ido - 1) + ido * ((1) + cdim * (k))] + cc[(ido - 1) + ido * ((1) + cdim * (k))];
-                double tr3 = cc[(ido - 1) + ido * ((3) + cdim * (k))] + cc[(ido - 1) + ido * ((3) + cdim * (k))];
+                float ti5 = cc[(0) + ido * ((2) + cdim * (k))] + cc[(0) + ido * ((2) + cdim * (k))];
+                float ti4 = cc[(0) + ido * ((4) + cdim * (k))] + cc[(0) + ido * ((4) + cdim * (k))];
+                float tr2 = cc[(ido - 1) + ido * ((1) + cdim * (k))] + cc[(ido - 1) + ido * ((1) + cdim * (k))];
+                float tr3 = cc[(ido - 1) + ido * ((3) + cdim * (k))] + cc[(ido - 1) + ido * ((3) + cdim * (k))];
                 ch[(0) + ido * ((k) + l1 * (0))] = cc[(0) + ido * ((0) + cdim * (k))] + tr2 + tr3;
-                double cr2 = cc[(0) + ido * ((0) + cdim * (k))] + tr11 * tr2 + tr12 * tr3;
-                double cr3 = cc[(0) + ido * ((0) + cdim * (k))] + tr12 * tr2 + tr11 * tr3;
-                double ci4, ci5;
+                float cr2 = cc[(0) + ido * ((0) + cdim * (k))] + tr11 * tr2 + tr12 * tr3;
+                float cr3 = cc[(0) + ido * ((0) + cdim * (k))] + tr12 * tr2 + tr11 * tr3;
+                float ci4, ci5;
                 ci5 = ti5 * ti11 + ti4 * ti12;
                 ci4 = ti5 * ti12 - ti4 * ti11;
                 ch[(0) + ido * ((k) + l1 * (4))] = cr2 + ci5;
@@ -733,23 +733,23 @@ namespace PocketFFT
                 for (int i = 2; i < ido; i += 2)
                 {
                     int ic = ido - i;
-                    double tr2, tr3, tr4, tr5, ti2, ti3, ti4, ti5;
+                    float tr2, tr3, tr4, tr5, ti2, ti3, ti4, ti5;
                     tr2 = cc[(i - 1) + ido * ((2) + cdim * (k))] + cc[(ic - 1) + ido * ((1) + cdim * (k))]; tr5 = cc[(i - 1) + ido * ((2) + cdim * (k))] - cc[(ic - 1) + ido * ((1) + cdim * (k))];
                     ti5 = cc[(i) + ido * ((2) + cdim * (k))] + cc[(ic) + ido * ((1) + cdim * (k))]; ti2 = cc[(i) + ido * ((2) + cdim * (k))] - cc[(ic) + ido * ((1) + cdim * (k))];
                     tr3 = cc[(i - 1) + ido * ((4) + cdim * (k))] + cc[(ic - 1) + ido * ((3) + cdim * (k))]; tr4 = cc[(i - 1) + ido * ((4) + cdim * (k))] - cc[(ic - 1) + ido * ((3) + cdim * (k))];
                     ti4 = cc[(i) + ido * ((4) + cdim * (k))] + cc[(ic) + ido * ((3) + cdim * (k))]; ti3 = cc[(i) + ido * ((4) + cdim * (k))] - cc[(ic) + ido * ((3) + cdim * (k))];
                     ch[(i - 1) + ido * ((k) + l1 * (0))] = cc[(i - 1) + ido * ((0) + cdim * (k))] + tr2 + tr3;
                     ch[(i) + ido * ((k) + l1 * (0))] = cc[(i) + ido * ((0) + cdim * (k))] + ti2 + ti3;
-                    double cr2 = cc[(i - 1) + ido * ((0) + cdim * (k))] + tr11 * tr2 + tr12 * tr3;
-                    double ci2 = cc[(i) + ido * ((0) + cdim * (k))] + tr11 * ti2 + tr12 * ti3;
-                    double cr3 = cc[(i - 1) + ido * ((0) + cdim * (k))] + tr12 * tr2 + tr11 * tr3;
-                    double ci3 = cc[(i) + ido * ((0) + cdim * (k))] + tr12 * ti2 + tr11 * ti3;
-                    double ci4, ci5, cr5, cr4;
+                    float cr2 = cc[(i - 1) + ido * ((0) + cdim * (k))] + tr11 * tr2 + tr12 * tr3;
+                    float ci2 = cc[(i) + ido * ((0) + cdim * (k))] + tr11 * ti2 + tr12 * ti3;
+                    float cr3 = cc[(i - 1) + ido * ((0) + cdim * (k))] + tr12 * tr2 + tr11 * tr3;
+                    float ci3 = cc[(i) + ido * ((0) + cdim * (k))] + tr12 * ti2 + tr11 * ti3;
+                    float ci4, ci5, cr5, cr4;
                     cr5 = tr5 * ti11 + tr4 * ti12;
                     cr4 = tr5 * ti12 - tr4 * ti11;
                     ci5 = ti5 * ti11 + ti4 * ti12;
                     ci4 = ti5 * ti12 - ti4 * ti11;
-                    double dr2, dr3, dr4, dr5, di2, di3, di4, di5;
+                    float dr2, dr3, dr4, dr5, di2, di3, di4, di5;
                     dr4 = cr3 + ci4; dr3 = cr3 - ci4;
                     di3 = ci3 + cr4; di4 = ci3 - cr4;
                     dr5 = cr2 + ci5; dr2 = cr2 - ci5;
@@ -766,18 +766,18 @@ namespace PocketFFT
             }
         }
 
-        private static void radf5(int ido, int l1, Span<double> cc, Span<double> ch, Span<double> wa)
+        private static void radf5(int ido, int l1, Span<float> cc, Span<float> ch, Span<float> wa)
         {
             const int cdim = 5;
-            const double
-                tr11 = 0.3090169943749474241,
-                ti11 = 0.95105651629515357212,
-                tr12 = -0.8090169943749474241,
-                ti12 = 0.58778525229247312917;
+            const float
+                tr11 = 0.3090169943749474241f,
+                ti11 = 0.95105651629515357212f,
+                tr12 = -0.8090169943749474241f,
+                ti12 = 0.58778525229247312917f;
 
             for (int k = 0; k < l1; k++)
             {
-                double cr2, cr3, ci4, ci5;
+                float cr2, cr3, ci4, ci5;
                 cr2 = cc[(0) + ido * ((k) + l1 * (4))] + cc[(0) + ido * ((k) + l1 * (1))];
                 ci5 = cc[(0) + ido * ((k) + l1 * (4))] - cc[(0) + ido * ((k) + l1 * (1))];
                 cr3 = cc[(0) + ido * ((k) + l1 * (3))] + cc[(0) + ido * ((k) + l1 * (2))];
@@ -798,7 +798,7 @@ namespace PocketFFT
             {
                 for (int i = 2; i < ido; i += 2)
                 {
-                    double ci2, di2, ci4, ci5, di3, di4, di5, ci3, cr2, cr3, dr2, dr3,
+                    float ci2, di2, ci4, ci5, di3, di4, di5, ci3, cr2, cr3, dr2, dr3,
                         dr4, dr5, cr5, cr4, ti2, ti3, ti5, ti4, tr2, tr3, tr4, tr5;
                     int ic = ido - i;
                     dr2 = wa[(i - 2) + (0) * (ido - 1)] * cc[(i - 1) + ido * ((k) + l1 * (1))] + wa[(i - 1) + (0) * (ido - 1)] * cc[(i) + ido * ((k) + l1 * (1))];
@@ -835,7 +835,7 @@ namespace PocketFFT
             }
         }
 
-        private static void radbg(int ido, int ip, int l1, Span<double> cc, Span<double> ch, Span<double> wa, Span<double> csarr)
+        private static void radbg(int ido, int ip, int l1, Span<float> cc, Span<float> ch, Span<float> wa, Span<float> csarr)
         {
             int cdim = ip;
             int ipph = (ip + 1) / 2;
@@ -890,13 +890,13 @@ namespace PocketFFT
                 for (; j < ipph - 3; j += 4, jc -= 4)
                 {
                     iang += l; if (iang > ip) iang -= ip;
-                    double ar1 = csarr[2 * iang], ai1 = csarr[2 * iang + 1];
+                    float ar1 = csarr[2 * iang], ai1 = csarr[2 * iang + 1];
                     iang += l; if (iang > ip) iang -= ip;
-                    double ar2 = csarr[2 * iang], ai2 = csarr[2 * iang + 1];
+                    float ar2 = csarr[2 * iang], ai2 = csarr[2 * iang + 1];
                     iang += l; if (iang > ip) iang -= ip;
-                    double ar3 = csarr[2 * iang], ai3 = csarr[2 * iang + 1];
+                    float ar3 = csarr[2 * iang], ai3 = csarr[2 * iang + 1];
                     iang += l; if (iang > ip) iang -= ip;
-                    double ar4 = csarr[2 * iang], ai4 = csarr[2 * iang + 1];
+                    float ar4 = csarr[2 * iang], ai4 = csarr[2 * iang + 1];
                     for (int ik = 0; ik < idl1; ++ik)
                     {
                         cc[(ik) + idl1 * (l)] += ar1 * ch[(ik) + idl1 * (j)] + ar2 * ch[(ik) + idl1 * (j + 1)]
@@ -909,9 +909,9 @@ namespace PocketFFT
                 for (; j < ipph - 1; j += 2, jc -= 2)
                 {
                     iang += l; if (iang > ip) iang -= ip;
-                    double ar1 = csarr[2 * iang], ai1 = csarr[2 * iang + 1];
+                    float ar1 = csarr[2 * iang], ai1 = csarr[2 * iang + 1];
                     iang += l; if (iang > ip) iang -= ip;
-                    double ar2 = csarr[2 * iang], ai2 = csarr[2 * iang + 1];
+                    float ar2 = csarr[2 * iang], ai2 = csarr[2 * iang + 1];
                     for (int ik = 0; ik < idl1; ++ik)
                     {
                         cc[(ik) + idl1 * (l)] += ar1 * ch[(ik) + idl1 * (j)] + ar2 * ch[(ik) + idl1 * (j + 1)];
@@ -922,7 +922,7 @@ namespace PocketFFT
                 for (; j < ipph; ++j, --jc)
                 {
                     iang += l; if (iang > ip) iang -= ip;
-                    double war = csarr[2 * iang], wai = csarr[2 * iang + 1];
+                    float war = csarr[2 * iang], wai = csarr[2 * iang + 1];
                     for (int ik = 0; ik < idl1; ++ik)
                     {
                         cc[(ik) + idl1 * (l)] += war * ch[(ik) + idl1 * (j)];
@@ -977,7 +977,7 @@ namespace PocketFFT
                     int idij = is1;
                     for (int i = 1; i <= ido - 2; i += 2)
                     {
-                        double t1 = ch[(i) + ido * ((k) + l1 * (j))], t2 = ch[(i + 1) + ido * ((k) + l1 * (j))];
+                        float t1 = ch[(i) + ido * ((k) + l1 * (j))], t2 = ch[(i + 1) + ido * ((k) + l1 * (j))];
                         ch[(i) + ido * ((k) + l1 * (j))] = wa[idij] * t1 - wa[idij + 1] * t2;
                         ch[(i + 1) + ido * ((k) + l1 * (j))] = wa[idij] * t2 + wa[idij + 1] * t1;
                         idij += 2;
@@ -986,7 +986,7 @@ namespace PocketFFT
             }
         }
 
-        private static void radfg(int ido, int ip, int l1, Span<double> cc, Span<double> ch, Span<double> wa, Span<double> csarr)
+        private static void radfg(int ido, int ip, int l1, Span<float> cc, Span<float> ch, Span<float> wa, Span<float> csarr)
         {
             int cdim = ip;
             int ipph = (ip + 1) / 2;
@@ -1006,9 +1006,9 @@ namespace PocketFFT
 
                         for (int i = 1; i <= ido - 2; i += 2)                      // 112
                         {
-                            double t1 = cc[(i) + ido * ((k) + l1 * (j))], t2 = cc[(i + 1) + ido * ((k) + l1 * (j))],
+                            float t1 = cc[(i) + ido * ((k) + l1 * (j))], t2 = cc[(i + 1) + ido * ((k) + l1 * (j))],
                                 t3 = cc[(i) + ido * ((k) + l1 * (jc))], t4 = cc[(i + 1) + ido * ((k) + l1 * (jc))];
-                            double x1 = wa[idij] * t1 + wa[idij + 1] * t2,
+                            float x1 = wa[idij] * t1 + wa[idij + 1] * t2,
                                 x2 = wa[idij] * t2 - wa[idij + 1] * t1,
                                 x3 = wa[idij2] * t3 + wa[idij2 + 1] * t4,
                                 x4 = wa[idij2] * t4 - wa[idij2 + 1] * t3;
@@ -1029,7 +1029,7 @@ namespace PocketFFT
                 {
                     int ikj = ido * ((k) + l1 * (j));
                     int ikjc = ido * ((k) + l1 * (jc));
-                    double t1 = cc[ikj], t2 = cc[ikjc];
+                    float t1 = cc[ikj], t2 = cc[ikjc];
                     cc[ikj] = t1 + t2;
                     cc[ikjc] = t2 - t1;
                 }
@@ -1050,13 +1050,13 @@ namespace PocketFFT
                 for (; j < ipph - 3; j += 4, jc -= 4)              // 126
                 {
                     iang += l; if (iang >= ip) iang -= ip;
-                    double ar1 = csarr[2 * iang], ai1 = csarr[2 * iang + 1];
+                    float ar1 = csarr[2 * iang], ai1 = csarr[2 * iang + 1];
                     iang += l; if (iang >= ip) iang -= ip;
-                    double ar2 = csarr[2 * iang], ai2 = csarr[2 * iang + 1];
+                    float ar2 = csarr[2 * iang], ai2 = csarr[2 * iang + 1];
                     iang += l; if (iang >= ip) iang -= ip;
-                    double ar3 = csarr[2 * iang], ai3 = csarr[2 * iang + 1];
+                    float ar3 = csarr[2 * iang], ai3 = csarr[2 * iang + 1];
                     iang += l; if (iang >= ip) iang -= ip;
-                    double ar4 = csarr[2 * iang], ai4 = csarr[2 * iang + 1];
+                    float ar4 = csarr[2 * iang], ai4 = csarr[2 * iang + 1];
                     for (int ik = 0; ik < idl1; ++ik)                       // 125
                     {
                         ch[(ik) + idl1 * (l)] += ar1 * cc[(ik) + idl1 * (j)] + ar2 * cc[(ik) + idl1 * (j + 1)]
@@ -1069,9 +1069,9 @@ namespace PocketFFT
                 for (; j < ipph - 1; j += 2, jc -= 2)              // 126
                 {
                     iang += l; if (iang >= ip) iang -= ip;
-                    double ar1 = csarr[2 * iang], ai1 = csarr[2 * iang + 1];
+                    float ar1 = csarr[2 * iang], ai1 = csarr[2 * iang + 1];
                     iang += l; if (iang >= ip) iang -= ip;
-                    double ar2 = csarr[2 * iang], ai2 = csarr[2 * iang + 1];
+                    float ar2 = csarr[2 * iang], ai2 = csarr[2 * iang + 1];
                     for (int ik = 0; ik < idl1; ++ik)                       // 125
                     {
                         ch[(ik) + idl1 * (l)] += ar1 * cc[(ik) + idl1 * (j)] + ar2 * cc[(ik) + idl1 * (j + 1)];
@@ -1082,7 +1082,7 @@ namespace PocketFFT
                 for (; j < ipph; ++j, --jc)              // 126
                 {
                     iang += l; if (iang >= ip) iang -= ip;
-                    double ar = csarr[2 * iang], ai = csarr[2 * iang + 1];
+                    float ar = csarr[2 * iang], ai = csarr[2 * iang + 1];
                     for (int ik = 0; ik < idl1; ++ik)                       // 125
                     {
                         ch[(ik) + idl1 * (l)] += ar * cc[(ik) + idl1 * (j)];

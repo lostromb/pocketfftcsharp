@@ -1,31 +1,31 @@
-using PocketFFT;
+﻿using PocketFFT;
 
 namespace ManagedUnitTests
 {
     [TestClass]
-    public class RoundTripTests
+    public class RoundTripTestsFloat32   
     {
         private const int MAX_LENGTH = 8192;
-        private const double epsilon = 2e-15;
+        private const float epsilon = 2e-6f;
 
         [TestMethod]
         public void TestReal()
         {
-            double errsum = 0;
+            float errsum = 0;
             for (int length = 1; length <= MAX_LENGTH; ++length)
             {
                 //Console.WriteLine("testing real " + length);
-                double[] data = new double[2 * length];
-                double[] odata = new double[2 * length];
+                float[] data = new float[2 * length];
+                float[] odata = new float[2 * length];
                 fill_random(odata, length);
                 odata.AsSpan(0, length).CopyTo(data);
-                using (IRealFFTPlan plan = FFTPlanFactory.Create1DRealFFTPlan(length))
+                using (IReal1DFFTPlanFloat32 plan = FFTPlanFactory.Create1DRealFFTPlanFloat32(length))
                 {
-                    plan.Forward(data, 1.0);
-                    plan.Backward(data, 1.0 / length);
+                    plan.Forward(data, 1.0f);
+                    plan.Backward(data, 1.0f / length);
                 }
 
-                double err = errcalc(data, odata, length);
+                float err = errcalc(data, odata, length);
                 Assert.IsTrue(err < epsilon, $"problem at real length {length}: {err}");
                 errsum += err;
             }
@@ -36,21 +36,21 @@ namespace ManagedUnitTests
         [TestMethod]
         public void TestComplex()
         {
-            double errsum = 0;
+            float errsum = 0;
 
             for (int length = 1; length <= MAX_LENGTH; ++length)
             {
-                //Console.WriteLine("testing cmplx " + length);
-                cmplx[] data = new cmplx[length];
-                cmplx[] odata = new cmplx[length];
+                //Console.WriteLine("testing cmplxF " + length);
+                cmplxF[] data = new cmplxF[length];
+                cmplxF[] odata = new cmplxF[length];
                 fill_random(odata, length);
                 odata.AsSpan(0, length).CopyTo(data);
-                using (IComplexFFTPlan plan = FFTPlanFactory.Create1DComplexFFTPlan(length))
+                using (IComplex1DFFTPlanFloat32 plan = FFTPlanFactory.Create1DComplexFFTPlanFloat32(length))
                 {
-                    plan.Forward(data, 1.0);
-                    plan.Backward(data, 1.0 / length);
+                    plan.Forward(data, 1.0f);
+                    plan.Backward(data, 1.0f / length);
                 }
-                double err = errcalc(data, odata, length);
+                float err = errcalc(data, odata, length);
                 Assert.IsTrue(err < epsilon, $"problem at complex length {length}: {err}");
                 errsum += err;
             }
@@ -58,38 +58,38 @@ namespace ManagedUnitTests
             Console.WriteLine($"errsum: {errsum}");
         }
 
-        private static void fill_random(Span<double> data, int length)
+        private static void fill_random(Span<float> data, int length)
         {
             for (int m = 0; m < length; ++m)
             {
-                data[m] = Random.Shared.NextDouble() - 0.5;
+                data[m] = (float)(Random.Shared.NextDouble() - 0.5);
             }
         }
 
-        private static void fill_random(Span<cmplx> data, int length)
+        private static void fill_random(Span<cmplxF> data, int length)
         {
             for (int m = 0; m < length; ++m)
             {
-                data[m].r = Random.Shared.NextDouble() - 0.5;
-                data[m].i = Random.Shared.NextDouble() - 0.5;
+                data[m].r = (float)(Random.Shared.NextDouble() - 0.5);
+                data[m].i = (float)(Random.Shared.NextDouble() - 0.5);
             }
         }
 
-        private static double errcalc(Span<double> data, Span<double> odata, int length)
+        private static float errcalc(Span<float> data, Span<float> odata, int length)
         {
-            double sum = 0, errsum = 0;
+            float sum = 0, errsum = 0;
             for (int m = 0; m < length; ++m)
             {
                 errsum += (data[m] - odata[m]) * (data[m] - odata[m]);
                 sum += odata[m] * odata[m];
             }
 
-            return Math.Sqrt(errsum / sum);
+            return (float)Math.Sqrt(errsum / sum);
         }
 
-        private static double errcalc(Span<cmplx> data, Span<cmplx> odata, int length)
+        private static float errcalc(Span<cmplxF> data, Span<cmplxF> odata, int length)
         {
-            double sum = 0, errsum = 0;
+            float sum = 0, errsum = 0;
             for (int m = 0; m < length; ++m)
             {
                 errsum += (data[m].r - odata[m].r) * (data[m].r - odata[m].r);
@@ -98,7 +98,7 @@ namespace ManagedUnitTests
                 sum += odata[m].i * odata[m].i;
             }
 
-            return Math.Sqrt(errsum / sum);
+            return (float)Math.Sqrt(errsum / sum);
         }
     }
 }

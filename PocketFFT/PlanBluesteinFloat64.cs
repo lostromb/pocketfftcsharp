@@ -6,18 +6,18 @@ using System.Text;
 
 namespace PocketFFT
 {
-    internal class FFTBluesteinPlan : IRealFFTPlan, IComplexFFTPlan
+    internal class PlanBluesteinFloat64 : IReal1DFFTPlanFloat64, IComplex1DFFTPlanFloat64
     {
         internal int n;
         internal int n2;
-        internal ComplexFFTPackedPlan plan;
+        internal PlanComplexPackedFloat64 plan;
         internal cmplx[] mem;
         internal int bk; // indexes into mem
         internal int bkf; // indexes into mem
 
         public int Length => plan.length;
 
-        public FFTBluesteinPlan(int length)
+        public PlanBluesteinFloat64(int length)
         {
             this.n = length;
             this.n2 = Intrinsics.good_size(this.n * 2 - 1);
@@ -62,7 +62,7 @@ namespace PocketFFT
                 bkf[m].i = 0.0;
             }
 
-            this.plan = new ComplexFFTPackedPlan(this.n2);
+            this.plan = new PlanComplexPackedFloat64(this.n2);
             this.plan.Forward(bkf, 1.0);
         }
 

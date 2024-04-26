@@ -1,12 +1,6 @@
-﻿using System.Runtime.InteropServices.ComTypes;
-
-namespace PocketFFT
+﻿namespace PocketFFT
 {
     using System;
-    using System.Buffers.Binary;
-    using System.Collections;
-    using System.Collections.Generic;
-    using System.Runtime.InteropServices;
 
     // https://gitlab.mpcdf.mpg.de/mtr/pocketfft
 
@@ -14,7 +8,7 @@ namespace PocketFFT
     // https://bitbucket.org/jpommier/pffft/src/master/
     public static class FFTPlanFactory
     {
-        public static IComplexFFTPlan Create1DComplexFFTPlan(int length)
+        public static IComplex1DFFTPlanFloat32 Create1DComplexFFTPlanFloat32(int length)
         {
             if (length == 0)
             {
@@ -22,12 +16,12 @@ namespace PocketFFT
             }
 
 #if NETCOREAPP
-            return new NativeComplexFFTPlan(length);
+            return new PlanNativeComplexFloat32(length);
 #endif
 
             if ((length < 50) || (Intrinsics.largest_prime_factor(length) <= Math.Sqrt(length)))
             {
-                return new ComplexFFTPackedPlan(length);
+                return new PlanComplexPackedFloat32(length);
             }
 
             double comp1 = Intrinsics.cost_guess(length);
@@ -36,15 +30,15 @@ namespace PocketFFT
 
             if (comp2 < comp1) // use Bluestein
             {
-                return new FFTBluesteinPlan(length);
+                return new PlanBluesteinFloat32(length);
             }
             else
             {
-                return new ComplexFFTPackedPlan(length);
+                return new PlanComplexPackedFloat32(length);
             }
         }
 
-        public static IRealFFTPlan Create1DRealFFTPlan(int length)
+        public static IComplex1DFFTPlanFloat64 Create1DComplexFFTPlanFloat64(int length)
         {
             if (length == 0)
             {
@@ -52,12 +46,42 @@ namespace PocketFFT
             }
 
 #if NETCOREAPP
-            return new NativeRealFFTPlan(length);
+            return new PlanNativeComplexFloat64(length);
 #endif
 
             if ((length < 50) || (Intrinsics.largest_prime_factor(length) <= Math.Sqrt(length)))
             {
-                return new RealFFTPackedPlan(length);
+                return new PlanComplexPackedFloat64(length);
+            }
+
+            double comp1 = Intrinsics.cost_guess(length);
+            double comp2 = 2 * Intrinsics.cost_guess(Intrinsics.good_size(2 * length - 1));
+            comp2 *= 1.5; /* fudge factor that appears to give good overall performance */
+
+            if (comp2 < comp1) // use Bluestein
+            {
+                return new PlanBluesteinFloat64(length);
+            }
+            else
+            {
+                return new PlanComplexPackedFloat64(length);
+            }
+        }
+
+        public static IReal1DFFTPlanFloat32 Create1DRealFFTPlanFloat32(int length)
+        {
+            if (length == 0)
+            {
+                throw new ArgumentOutOfRangeException("FFT length must be greater than zero");
+            }
+
+#if NETCOREAPP
+            return new PlanNativeRealFloat32(length);
+#endif
+
+            if ((length < 50) || (Intrinsics.largest_prime_factor(length) <= Math.Sqrt(length)))
+            {
+                return new PlanRealPackedFloat32(length);
             }
 
             double comp1 = 0.5 * Intrinsics.cost_guess(length);
@@ -65,11 +89,40 @@ namespace PocketFFT
             comp2 *= 1.5; /* fudge factor that appears to give good overall performance */
             if (comp2 < comp1) // use Bluestein
             {
-                return new FFTBluesteinPlan(length);
+                return new PlanBluesteinFloat32(length);
             }
             else
             {
-                return new RealFFTPackedPlan(length);
+                return new PlanRealPackedFloat32(length);
+            }
+        }
+
+        public static IReal1DFFTPlanFloat64 Create1DRealFFTPlanFloat64(int length)
+        {
+            if (length == 0)
+            {
+                throw new ArgumentOutOfRangeException("FFT length must be greater than zero");
+            }
+
+#if NETCOREAPP
+            return new PlanNativeRealFloat64(length);
+#endif
+
+            if ((length < 50) || (Intrinsics.largest_prime_factor(length) <= Math.Sqrt(length)))
+            {
+                return new PlanRealPackedFloat64(length);
+            }
+
+            double comp1 = 0.5 * Intrinsics.cost_guess(length);
+            double comp2 = 2 * Intrinsics.cost_guess(Intrinsics.good_size(2 * length - 1));
+            comp2 *= 1.5; /* fudge factor that appears to give good overall performance */
+            if (comp2 < comp1) // use Bluestein
+            {
+                return new PlanBluesteinFloat64(length);
+            }
+            else
+            {
+                return new PlanRealPackedFloat64(length);
             }
         }
     }

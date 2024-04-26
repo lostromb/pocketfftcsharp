@@ -21,6 +21,10 @@ namespace PocketFFT
                 throw new ArgumentOutOfRangeException("FFT length must be greater than zero");
             }
 
+#if NETCOREAPP
+            return new NativeComplexFFTPlan(length);
+#endif
+
             if ((length < 50) || (Intrinsics.largest_prime_factor(length) <= Math.Sqrt(length)))
             {
                 return new ComplexFFTPackedPlan(length);
@@ -46,6 +50,10 @@ namespace PocketFFT
             {
                 throw new ArgumentOutOfRangeException("FFT length must be greater than zero");
             }
+
+#if NETCOREAPP
+            return new NativeRealFFTPlan(length);
+#endif
 
             if ((length < 50) || (Intrinsics.largest_prime_factor(length) <= Math.Sqrt(length)))
             {

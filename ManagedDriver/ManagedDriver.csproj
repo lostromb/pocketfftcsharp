@@ -12,7 +12,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\PocketFFT-Managed\PocketFFT-Managed.csproj" />
+    <ProjectReference Include="..\PocketFFT\PocketFFT.csproj" />
   </ItemGroup>
 
 </Project>

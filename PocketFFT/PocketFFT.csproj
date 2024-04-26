@@ -3,6 +3,7 @@
   <PropertyGroup>
     <TargetFrameworks>netstandard1.1;net8.0</TargetFrameworks>
     <RootNamespace>PocketFFT</RootNamespace>
+    <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|netstandard1.1|AnyCPU'" />
@@ -12,6 +13,16 @@
   <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Release|netstandard1.1|AnyCPU'" />
 
   <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Release|net8.0|AnyCPU'" />
+
+  <ItemGroup>
+    <None Remove="PocketFFT.dll" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="PocketFFT.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="System.Memory" Version="4.5.5" />

@@ -12,7 +12,6 @@
 
 #include <math.h>
 #include <string.h>
-#include "NailTester.h"
 #include "pocketfft.h"
 #include "cmplx.h"
 
@@ -304,8 +303,6 @@ NOINLINE static void pass2b(size_t ido, size_t l1, const cmplx* cc, cmplx* ch, c
 {
 	const size_t cdim = 2;
 
-	if (NAIL_TEST) printf("start pass2b\n");
-	if (NAIL_TEST) NailTestPrintComplexArray(cc, cdim * l1);
 	if (ido == 1)
 	{
 		for (size_t k = 0; k < l1; ++k)
@@ -343,8 +340,6 @@ NOINLINE static void pass2f(size_t ido, size_t l1, const cmplx* cc,
 	cmplx* ch, const cmplx* wa)
 {
 	const size_t cdim = 2;
-	if (NAIL_TEST) printf("start pass2f\n");
-	if (NAIL_TEST) NailTestPrintComplexArray(cc, cdim * l1);
 	if (ido == 1)
 	{
 		for (size_t k = 0; k < l1; ++k)
@@ -383,8 +378,6 @@ NOINLINE static void pass3b(size_t ido, size_t l1, const cmplx* cc,
 	const size_t cdim = 3;
 	const double tw1r = -0.5, tw1i = 0.86602540378443864676;
 
-	if (NAIL_TEST) printf("start pass3b\n");
-	if (NAIL_TEST) NailTestPrintComplexArray(cc, cdim * l1);
 	if (ido == 1)
 	{
 		for (size_t k = 0; k < l1; ++k)
@@ -460,8 +453,6 @@ NOINLINE static void pass3f(size_t ido, size_t l1, const cmplx* cc,
 	const size_t cdim = 3;
 	const double tw1r = -0.5, tw1i = -0.86602540378443864676;
 
-	if (NAIL_TEST) printf("start pass3f\n");
-	if (NAIL_TEST) NailTestPrintComplexArray(cc, cdim * l1);
 	if (ido == 1)
 	{
 		for (size_t k = 0; k < l1; ++k)
@@ -535,8 +526,6 @@ NOINLINE static void pass3f(size_t ido, size_t l1, const cmplx* cc,
 NOINLINE static void pass4b(size_t ido, size_t l1, const cmplx* cc, cmplx* ch, const cmplx* wa)
 {
 	const size_t cdim = 4;
-	if (NAIL_TEST) printf("start pass4b\n");
-	if (NAIL_TEST) NailTestPrintComplexArray(cc, cdim * l1);
 	if (ido == 1)
 	{
 		for (size_t k = 0; k < l1; ++k)
@@ -626,8 +615,6 @@ NOINLINE static void pass4f(size_t ido, size_t l1, const cmplx* cc,
 {
 	const size_t cdim = 4;
 
-	if (NAIL_TEST) printf("start pass4f\n");
-	if (NAIL_TEST) NailTestPrintComplexArray(cc, cdim * l1);
 	if (ido == 1)
 	{
 		for (size_t k = 0; k < l1; ++k)
@@ -749,8 +736,6 @@ NOINLINE static void pass5b(size_t ido, size_t l1, const cmplx* cc,
 		tw2r = -0.8090169943749474241,
 		tw2i = 0.58778525229247312917;
 
-	if (NAIL_TEST) printf("start pass5b\n");
-	if (NAIL_TEST) NailTestPrintComplexArray(cc, cdim * l1);
 	if (ido == 1)
 		for (size_t k = 0; k < l1; ++k)
 		{
@@ -838,8 +823,6 @@ NOINLINE static void pass5f(size_t ido, size_t l1, const cmplx* cc,
 		tw2r = -0.8090169943749474241,
 		tw2i = -0.58778525229247312917;
 
-	if (NAIL_TEST) printf("start pass5f\n");
-	if (NAIL_TEST) NailTestPrintComplexArray(cc, cdim * l1);
 	if (ido == 1)
 		for (size_t k = 0; k < l1; ++k)
 		{
@@ -946,8 +929,6 @@ NOINLINE static void pass7(size_t ido, size_t l1, const cmplx* cc,
 		tw3r = -0.9009688679024191262361,
 		tw3i = sign * 0.4338837391175581204758;
 
-	if (NAIL_TEST) printf("start pass7\n");
-	if (NAIL_TEST) NailTestPrintComplexArray(cc, cdim * l1);
 	if (ido == 1)
 		for (size_t k = 0; k < l1; ++k)
 		{
@@ -1091,8 +1072,6 @@ NOINLINE static void pass11(size_t ido, size_t l1, const cmplx* cc,
 		tw5r = -0.9594929736144973898904,
 		tw5i = sign * 0.2817325568414296977114;
 
-	if (NAIL_TEST) printf("start pass11\n");
-	if (NAIL_TEST) NailTestPrintComplexArray(cc, cdim * l1);
 	if (ido == 1)
 		for (size_t k = 0; k < l1; ++k)
 		{
@@ -1258,8 +1237,6 @@ NOINLINE static int passg(size_t ido, size_t ip, size_t l1,
 	size_t ipph = (ip + 1) / 2;
 	size_t idl1 = ido * l1;
 
-	if (NAIL_TEST) printf("start passg\n");
-	if (NAIL_TEST) NailTestPrintComplexArray(cc, cdim * l1);
 	cmplx* wal = RALLOC(cmplx, ip);
 	if (!wal) return -1;
 	wal[0] = (cmplx){ 1.,0. };		
@@ -1551,9 +1528,6 @@ static cfftp_plan make_cfftp_plan(size_t length)
 		DEALLOC(plan->mem); DEALLOC(plan); return NULL;
 	}
 
-	//if (NAIL_TEST) printf("cfftp plan mem\n");
-	//if (NAIL_TEST) NailTestPrintComplexArray(plan->mem, tws);
-
 	return plan;
 }
 
@@ -1590,8 +1564,6 @@ NOINLINE static void radf2(size_t ido, size_t l1, const double* cc,
 {
 	const size_t cdim = 2;
 
-	if (NAIL_TEST) printf("start radf2\n");
-	if (NAIL_TEST) NailTestPrintDoubleArray(cc, cdim * l1);
 	for (size_t k = 0; k < l1; k++)
 	{
 		ch[(0) + ido * ((0) + cdim * (k))] = cc[(0) + ido * ((k)+l1 * (0))] + cc[(0) + ido * ((k)+l1 * (1))]; ch[(ido - 1) + ido * ((1) + cdim * (k))] = cc[(0) + ido * ((k)+l1 * (0))] - cc[(0) + ido * ((k)+l1 * (1))];
@@ -1620,8 +1592,6 @@ NOINLINE static void radf3(size_t ido, size_t l1, const double* cc,
 	const size_t cdim = 3;
 	static const double taur = -0.5, taui = 0.86602540378443864676;
 
-	if (NAIL_TEST) printf("start radf3\n");
-	if (NAIL_TEST) NailTestPrintDoubleArray(cc, cdim * l1);
 	for (size_t k = 0; k < l1; k++)
 	{
 		double cr2 = cc[(0) + ido * ((k)+l1 * (1))] + cc[(0) + ido * ((k)+l1 * (2))];
@@ -1656,8 +1626,6 @@ NOINLINE static void radf4(size_t ido, size_t l1, const double* cc,
 	const size_t cdim = 4;
 	static const double hsqt2 = 0.70710678118654752440;
 
-	if (NAIL_TEST) printf("start radf4\n");
-	if (NAIL_TEST) NailTestPrintDoubleArray(cc, cdim * l1);
 	for (size_t k = 0; k < l1; k++)
 	{
 		double tr1, tr2;
@@ -1712,8 +1680,6 @@ NOINLINE static void radf5(size_t ido, size_t l1, const double* cc,
 	static const double tr11 = 0.3090169943749474241, ti11 = 0.95105651629515357212,
 		tr12 = -0.8090169943749474241, ti12 = 0.58778525229247312917;
 
-	if (NAIL_TEST) printf("start radf5\n");
-	if (NAIL_TEST) NailTestPrintDoubleArray(cc, cdim * l1);
 	for (size_t k = 0; k < l1; k++)
 	{
 		double cr2, cr3, ci4, ci5;
@@ -1782,8 +1748,6 @@ NOINLINE static void radfg(size_t ido, size_t ip, size_t l1,
 	size_t ipph = (ip + 1) / 2;
 	size_t idl1 = ido * l1;
 
-	if (NAIL_TEST) printf("start radfg\n");
-	if (NAIL_TEST) NailTestPrintDoubleArray(cc, cdim * l1);
 	if (ido > 1)
 	{
 		for (size_t j = 1, jc = ip - 1; j < ipph; ++j, --jc)              // 114
@@ -1927,8 +1891,6 @@ NOINLINE static void radb2(size_t ido, size_t l1, const double* cc,
 {
 	const size_t cdim = 2;
 
-	if (NAIL_TEST) printf("start radb2\n");
-	if (NAIL_TEST) NailTestPrintDoubleArray(cc, cdim * l1);
 	for (size_t k = 0; k < l1; k++)
 	{
 		ch[(0) + ido * ((k)+l1 * (0))] = cc[(0) + ido * ((0) + cdim * (k))] + cc[(ido - 1) + ido * ((1) + cdim * (k))]; ch[(0) + ido * ((k)+l1 * (1))] = cc[(0) + ido * ((0) + cdim * (k))] - cc[(ido - 1) + ido * ((1) + cdim * (k))];
@@ -1957,8 +1919,6 @@ NOINLINE static void radb3(size_t ido, size_t l1, const double* cc,
 	const size_t cdim = 3;
 	static const double taur = -0.5, taui = 0.86602540378443864676;
 
-	if (NAIL_TEST) printf("start radb3\n");
-	if (NAIL_TEST) NailTestPrintDoubleArray(cc, cdim * l1);
 	for (size_t k = 0; k < l1; k++)
 	{
 		double tr2 = 2. * cc[(ido - 1) + ido * ((1) + cdim * (k))];
@@ -1994,8 +1954,6 @@ NOINLINE static void radb4(size_t ido, size_t l1, const double* cc,
 	const size_t cdim = 4;
 	static const double sqrt2 = 1.41421356237309504880;
 
-	if (NAIL_TEST) printf("start radb4\n");
-	if (NAIL_TEST) NailTestPrintDoubleArray(cc, cdim * l1);
 	for (size_t k = 0; k < l1; k++)
 	{
 		double tr1, tr2;
@@ -2043,8 +2001,6 @@ NOINLINE static void radb5(size_t ido, size_t l1, const double* cc,
 	static const double tr11 = 0.3090169943749474241, ti11 = 0.95105651629515357212,
 		tr12 = -0.8090169943749474241, ti12 = 0.58778525229247312917;
 
-	if (NAIL_TEST) printf("start radb5\n");
-	if (NAIL_TEST) NailTestPrintDoubleArray(cc, cdim * l1);
 	for (size_t k = 0; k < l1; k++)
 	{
 		double ti5 = cc[(0) + ido * ((2) + cdim * (k))] + cc[(0) + ido * ((2) + cdim * (k))];
@@ -2110,8 +2066,6 @@ NOINLINE static void radbg(size_t ido, size_t ip, size_t l1,
 	size_t ipph = (ip + 1) / 2;
 	size_t idl1 = ido * l1;
 
-	if (NAIL_TEST) printf("start radbg\n");
-	if (NAIL_TEST) NailTestPrintDoubleArray(cc, cdim * l1);
 	for (size_t k = 0; k < l1; ++k)        // 102
 		for (size_t i = 0; i < ido; ++i)     // 101
 			ch[(i)+ido * ((k)+l1 * (0))] = cc[(i)+ido * ((0) + cdim * (k))];
@@ -2255,6 +2209,7 @@ static void copy_and_norm(double* c, double* p1, size_t n, double fct)
 			for (size_t i = 0; i < n; ++i)
 				c[i] *= fct;
 }
+
 
 WARN_UNUSED_RESULT
 static int rfftp_forward(rfftp_plan plan, double c[], double fct)
@@ -2431,9 +2386,6 @@ NOINLINE static rfftp_plan make_rfftp_plan(size_t length)
 	{
 		DEALLOC(plan->mem); DEALLOC(plan); return NULL;
 	}
-
-	//if (NAIL_TEST) printf("rfftp plan mem\n");
-	//if (NAIL_TEST) NailTestPrintDoubleArray(plan->mem, tws);
 
 	return plan;
 }
@@ -2647,7 +2599,7 @@ typedef struct cfft_plan_i
 	fftblue_plan blueplan;
 } cfft_plan_i;
 
-cfft_plan make_cfft_plan(size_t length)
+extern __declspec(dllexport) cfft_plan make_cfft_plan(int length)
 {
 	if (length == 0) return NULL;
 	cfft_plan plan = RALLOC(cfft_plan_i, 1);
@@ -2676,7 +2628,7 @@ cfft_plan make_cfft_plan(size_t length)
 	return plan;
 }
 
-void destroy_cfft_plan(cfft_plan plan)
+extern __declspec(dllexport) void destroy_cfft_plan(cfft_plan plan)
 {
 	if (plan->blueplan)
 		destroy_fftblue_plan(plan->blueplan);
@@ -2685,7 +2637,7 @@ void destroy_cfft_plan(cfft_plan plan)
 	DEALLOC(plan);
 }
 
-WARN_UNUSED_RESULT int cfft_backward(cfft_plan plan, double c[], double fct)
+extern __declspec(dllexport) WARN_UNUSED_RESULT int cfft_backward(cfft_plan plan, double c[], double fct)
 {
 	if (plan->packplan)
 		return cfftp_backward(plan->packplan, c, fct);
@@ -2693,7 +2645,7 @@ WARN_UNUSED_RESULT int cfft_backward(cfft_plan plan, double c[], double fct)
 	return cfftblue_backward(plan->blueplan, c, fct);
 }
 
-WARN_UNUSED_RESULT int cfft_forward(cfft_plan plan, double c[], double fct)
+extern __declspec(dllexport) WARN_UNUSED_RESULT int cfft_forward(cfft_plan plan, double c[], double fct)
 {
 	if (plan->packplan)
 		return cfftp_forward(plan->packplan, c, fct);
@@ -2707,7 +2659,7 @@ typedef struct rfft_plan_i
 	fftblue_plan blueplan;
 } rfft_plan_i;
 
-rfft_plan make_rfft_plan(size_t length)
+extern __declspec(dllexport) rfft_plan make_rfft_plan(int length)
 {
 	if (length == 0) return NULL;
 	rfft_plan plan = RALLOC(rfft_plan_i, 1);
@@ -2736,7 +2688,7 @@ rfft_plan make_rfft_plan(size_t length)
 	return plan;
 }
 
-void destroy_rfft_plan(rfft_plan plan)
+extern __declspec(dllexport) void destroy_rfft_plan(rfft_plan plan)
 {
 	if (plan->blueplan)
 		destroy_fftblue_plan(plan->blueplan);
@@ -2745,19 +2697,19 @@ void destroy_rfft_plan(rfft_plan plan)
 	DEALLOC(plan);
 }
 
-size_t rfft_length(rfft_plan plan)
+extern __declspec(dllexport) int rfft_length(rfft_plan plan)
 {
 	if (plan->packplan) return plan->packplan->length;
 	return plan->blueplan->n;
 }
 
-size_t cfft_length(cfft_plan plan)
+extern __declspec(dllexport) int cfft_length(cfft_plan plan)
 {
 	if (plan->packplan) return plan->packplan->length;
 	return plan->blueplan->n;
 }
 
-WARN_UNUSED_RESULT int rfft_backward(rfft_plan plan, double c[], double fct)
+extern __declspec(dllexport) WARN_UNUSED_RESULT int rfft_backward(rfft_plan plan, double c[], double fct)
 {
 	if (plan->packplan)
 		return rfftp_backward(plan->packplan, c, fct);
@@ -2765,7 +2717,7 @@ WARN_UNUSED_RESULT int rfft_backward(rfft_plan plan, double c[], double fct)
 		return rfftblue_backward(plan->blueplan, c, fct);
 }
 
-WARN_UNUSED_RESULT int rfft_forward(rfft_plan plan, double c[], double fct)
+extern __declspec(dllexport) WARN_UNUSED_RESULT int rfft_forward(rfft_plan plan, double c[], double fct)
 {
 	if (plan->packplan)
 		return rfftp_forward(plan->packplan, c, fct);

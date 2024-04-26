@@ -18,9 +18,6 @@
     <ClInclude Include="pocketfft.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="NailTester.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="cmplx.h">
       <Filter>Header Files</Filter>
     </ClInclude>

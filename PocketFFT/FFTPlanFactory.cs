@@ -12,7 +12,7 @@
             }
 
 #if NETCOREAPP
-            return new PlanNativeComplexFloat32(length);
+            //return new PlanNativeComplexFloat32(length);
 #endif
 
             if ((length < 50) || (Intrinsics.largest_prime_factor(length) <= Math.Sqrt(length)))
@@ -42,7 +42,7 @@
             }
 
 #if NETCOREAPP
-            return new PlanNativeComplexFloat64(length);
+            //return new PlanNativeComplexFloat64(length);
 #endif
 
             if ((length < 50) || (Intrinsics.largest_prime_factor(length) <= Math.Sqrt(length)))
@@ -72,7 +72,7 @@
             }
 
 #if NETCOREAPP
-            return new PlanNativeRealFloat32(length);
+            //return new PlanNativeRealFloat32(length);
 #endif
 
             if ((length < 50) || (Intrinsics.largest_prime_factor(length) <= Math.Sqrt(length)))
@@ -101,7 +101,7 @@
             }
 
 #if NETCOREAPP
-            return new PlanNativeRealFloat64(length);
+            //return new PlanNativeRealFloat64(length);
 #endif
 
             if ((length < 50) || (Intrinsics.largest_prime_factor(length) <= Math.Sqrt(length)))

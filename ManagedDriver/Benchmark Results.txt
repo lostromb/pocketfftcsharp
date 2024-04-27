@@ -105,6 +105,30 @@ better scale + copy
 | Real    | 5980            | 178,638.7 ns | 998.39 ns | 833.70 ns |         - |
 | Complex | 5980            | 287,184.8 ns | 955.98 ns | 798.28 ns |         - |
 
+small opts in bluestein pre and post steps - doesn't do much
+| Method    | TransformLength | Mean         | Error       | StdDev      | Allocated |
+|---------- |---------------- |-------------:|------------:|------------:|----------:|
+| Real32    | 64              |     395.0 ns |     1.88 ns |     1.57 ns |         - |
+| Real64    | 64              |     442.2 ns |     2.43 ns |     2.28 ns |         - |
+| Complex32 | 64              |     564.2 ns |     7.81 ns |     7.30 ns |         - |
+| Complex64 | 64              |     596.9 ns |     4.30 ns |     4.02 ns |         - |
+| Real32    | 191             |  12,847.7 ns |    42.09 ns |    32.86 ns |         - |
+| Real64    | 191             |  13,061.4 ns |    58.79 ns |    49.09 ns |         - |
+| Complex32 | 191             |  12,264.2 ns |    87.01 ns |    77.14 ns |         - |
+| Complex64 | 191             |  12,381.2 ns |   104.96 ns |    98.18 ns |         - |
+| Real32    | 1000            |   9,873.8 ns |   107.33 ns |   100.40 ns |         - |
+| Real64    | 1000            |  10,146.3 ns |   125.30 ns |   117.21 ns |         - |
+| Complex32 | 1000            |  15,637.2 ns |    89.35 ns |    79.20 ns |         - |
+| Complex64 | 1000            |  15,895.4 ns |   104.64 ns |    97.88 ns |         - |
+| Real32    | 2310            |  55,067.1 ns |   411.73 ns |   385.13 ns |         - |
+| Real64    | 2310            |  55,113.0 ns |   472.33 ns |   418.71 ns |         - |
+| Complex32 | 2310            |  48,283.1 ns |   197.71 ns |   175.26 ns |         - |
+| Complex64 | 2310            |  49,155.5 ns |   433.11 ns |   405.13 ns |         - |
+| Real32    | 5980            | 176,058.6 ns |   964.52 ns |   805.42 ns |         - |
+| Real64    | 5980            | 179,275.5 ns | 1,624.39 ns | 1,519.45 ns |         - |
+| Complex32 | 5980            | 296,568.1 ns | 2,851.16 ns | 2,666.98 ns |         - |
+| Complex64 | 5980            | 288,143.2 ns |   781.50 ns |   610.14 ns |         - |
+
 Native code
 | Method  | TransformLength | Mean         | Error       | StdDev      | Allocated |
 |-------- |---------------- |-------------:|------------:|------------:|----------:|

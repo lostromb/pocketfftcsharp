@@ -12,34 +12,34 @@ namespace PocketFFT
         internal int n2;
         internal PlanComplexPackedFloat64 plan;
         internal cmplx[] mem;
-        internal int bk; // indexes into mem
-        internal int bkf; // indexes into mem
+        internal int bk_idx; // indexes into mem
+        internal int bkf_idx; // indexes into mem
 
         public int Length => plan.length;
 
         public PlanBluesteinFloat64(int length)
         {
-            this.n = length;
-            this.n2 = Intrinsics.good_size(this.n * 2 - 1);
-            this.mem = ArrayPool<cmplx>.Shared.Rent(this.n + this.n2);
-            this.bk = 0;
-            this.bkf = this.bk + this.n;
+            n = length;
+            n2 = Intrinsics.good_size(n * 2 - 1);
+            mem = ArrayPool<cmplx>.Shared.Rent(n + n2);
+            bk_idx = 0;
+            bkf_idx = bk_idx + n;
 
             /* initialize b_k */
-            Span<double> tmp = new double[4 * this.n];
-            Intrinsics.sincos_2pibyn(2 * this.n, tmp);
-            Span<cmplx> bk = this.mem.AsSpan(this.bk);
-            Span<cmplx> bkf = this.mem.AsSpan(this.bkf);
+            Span<double> tmp = new double[4 * n];
+            Intrinsics.sincos_2pibyn(2 * n, tmp);
+            Span<cmplx> bk = mem.AsSpan(bk_idx);
+            Span<cmplx> bkf = mem.AsSpan(bkf_idx);
             bk[0].r = 1;
             bk[0].i = 0;
 
             int coeff = 0;
-            for (int m = 1; m < this.n; ++m)
+            for (int m = 1; m < n; ++m)
             {
                 coeff += 2 * m - 1;
-                if (coeff >= 2 * this.n)
+                if (coeff >= 2 * n)
                 {
-                    coeff -= 2 * this.n;
+                    coeff -= 2 * n;
                 }
 
                 bk[m].r = tmp[2 * coeff];
@@ -47,36 +47,36 @@ namespace PocketFFT
             }
 
             /* initialize the zero-padded, Fourier transformed b_k. Add normalisation. */
-            double xn2 = 1.0 / this.n2;
+            double xn2 = 1.0 / n2;
             bkf[0].r = bk[0].r * xn2;
             bkf[0].i = bk[0].i * xn2;
-            for (int m = 1; m < this.n; m++)
+            for (int m = 1; m < n; m++)
             {
-                bkf[m].r = bkf[this.n2 - m].r = bk[m].r * xn2;
-                bkf[m].i = bkf[this.n2 - m].i = bk[m].i * xn2;
+                bkf[m].r = bkf[n2 - m].r = bk[m].r * xn2;
+                bkf[m].i = bkf[n2 - m].i = bk[m].i * xn2;
             }
 
-            for (int m = this.n; m <= this.n2 - this.n; ++m)
+            // OPT Span.Clear(....)
+            for (int m = n; m <= n2 - n; ++m)
             {
                 bkf[m].r = 0.0;
                 bkf[m].i = 0.0;
             }
 
-            this.plan = new PlanComplexPackedFloat64(this.n2);
-            this.plan.Forward(bkf, 1.0);
+            plan = new PlanComplexPackedFloat64(n2);
+            plan.Forward(bkf, 1.0);
         }
 
         public void Dispose()
         {
-            if (this.mem != null)
+            if (mem != null)
             {
-                ArrayPool<cmplx>.Shared.Return(this.mem);
+                ArrayPool<cmplx>.Shared.Return(mem);
             }
         }
 
         public void Forward(Span<double> c, double fct)
         {
-            int n = this.n;
             cmplx[] tmp = ArrayPool<cmplx>.Shared.Rent(n);
             for (int m = 0; m < n; ++m)
             {
@@ -108,7 +108,6 @@ namespace PocketFFT
 
         public void Backward(Span<double> c, double fct)
         {
-            int n = this.n;
             cmplx[] tmp = ArrayPool<cmplx>.Shared.Rent(n);
             tmp[0].r = c[0];
             tmp[1].i = 0.0;
@@ -130,8 +129,7 @@ namespace PocketFFT
 
             for (int m = 1; m < n; m++)
             {
-                tmp[n - m].r = tmp[m].r;
-                tmp[n - m].i = -tmp[m].i;
+                Intrinsics.BLUESTEINSTEP0(ref tmp[n - m], ref tmp[m]);
             }
 
             fftblue_fft(tmp, 1, fct);
@@ -150,10 +148,8 @@ namespace PocketFFT
 
         private void fftblue_fft(Span<cmplx> c, int isign, double fct)
         {
-            int n = this.n;
-            int n2 = this.n2;
-            Span<cmplx> bk = this.mem.AsSpan(this.bk);
-            Span<cmplx> bkf = this.mem.AsSpan(this.bkf);
+            Span<cmplx> bk = mem.AsSpan(bk_idx);
+            Span<cmplx> bkf = mem.AsSpan(bkf_idx);
             cmplx[] akf = ArrayPool<cmplx>.Shared.Rent(n2);
 
             /* initialize a_k and FFT it */
@@ -161,65 +157,58 @@ namespace PocketFFT
             {
                 for (int m = 0; m < n; m++)
                 {
-                    akf[m].r = c[m].r * bk[m].r - c[m].i * bk[m].i;
-                    akf[m].i = c[m].r * bk[m].i + c[m].i * bk[m].r;
+                    Intrinsics.BLUESTEINSTEP1A(ref akf[m], ref bk[m], ref c[m]);
                 }
             }
             else
             {
                 for (int m = 0; m < n; m++)
                 {
-                    akf[m].r = c[m].r * bk[m].r + c[m].i * bk[m].i;
-                    akf[m].i = -c[m].r * bk[m].i + c[m].i * bk[m].r;
+                    Intrinsics.BLUESTEINSTEP1B(ref akf[m], ref c[m], ref bk[m]);
                 }
             }
 
-            for (int m = n; m < n2; ++m)
-            {
-                akf[m].r = 0;
-                akf[m].i = 0;
-            }
+            MemoryMarshal.Cast<cmplx, double>(akf.AsSpan(n, n2 - n)).Clear();
+            //for (int m = n; m < n2; ++m)
+            //{
+            //    akf[m].r = 0;
+            //    akf[m].i = 0;
+            //}
 
-            this.plan.Forward(akf, fct);
+            plan.Forward(akf, fct);
 
             /* do the convolution */
             if (isign > 0)
             {
                 for (int m = 0; m < n2; m++)
                 {
-                    double im = -akf[m].r * bkf[m].i + akf[m].i * bkf[m].r;
-                    akf[m].r = akf[m].r * bkf[m].r + akf[m].i * bkf[m].i;
-                    akf[m].i = im;
+                    Intrinsics.BLUESTEINSTEP2A(ref akf[m], ref bkf[m]);
                 }
             }
             else
             {
                 for (int m = 0; m < n2; m++)
                 {
-                    double im = akf[m].r * bkf[m].i + akf[m].i * bkf[m].r;
-                    akf[m].r = akf[m].r * bkf[m].r - akf[m].i * bkf[m].i;
-                    akf[m].i = im;
+                    Intrinsics.BLUESTEINSTEP2B(ref akf[m], ref bkf[m]);
                 }
             }
 
             /* inverse FFT */
-            this.plan.Backward(akf, 1.0);
+            plan.Backward(akf, 1.0);
 
             /* multiply by b_k */
             if (isign > 0)
             {
                 for (int m = 0; m < n; m++)
                 {
-                    c[m].r = bk[m].r * akf[m].r - bk[m].i * akf[m].i;
-                    c[m].i = bk[m].i * akf[m].r + bk[m].r * akf[m].i;
+                    Intrinsics.BLUESTEINSTEP3A(ref c[m], ref bk[m], ref akf[m]);
                 }
             }
             else
             {
                 for (int m = 0; m < n; m++)
                 {
-                    c[m].r = bk[m].r * akf[m].r + bk[m].i * akf[m].i;
-                    c[m].i = -bk[m].i * akf[m].r + bk[m].r * akf[m].i;
+                    Intrinsics.BLUESTEINSTEP3B(ref c[m], ref bk[m], ref akf[m]);
                 }
             }
 

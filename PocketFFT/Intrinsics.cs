@@ -975,5 +975,93 @@ namespace PocketFFT
             a.r = b.r * c.r - sign * b.i * c.i;
             a.i = b.r * c.i + sign * b.i * c.r;
         }
+
+        internal static void BLUESTEINSTEP0(ref cmplx a, ref cmplx b)
+        {
+            a.r = b.r;
+            a.i = -b.i;
+        }
+
+        internal static void BLUESTEINSTEP0(ref cmplxF a, ref cmplxF b)
+        {
+            a.r = b.r;
+            a.i = -b.i;
+        }
+
+        internal static void BLUESTEINSTEP1A(ref cmplx a, ref cmplx b, ref cmplx c)
+        {
+            a.r = b.r * c.r - b.i * c.i;
+            a.i = b.r * c.i + b.i * c.r;
+        }
+
+        internal static void BLUESTEINSTEP1A(ref cmplxF a, ref cmplxF b, ref cmplxF c)
+        {
+            a.r = b.r * c.r - b.i * c.i;
+            a.i = b.r * c.i + b.i * c.r;
+        }
+
+        internal static void BLUESTEINSTEP1B(ref cmplx a, ref cmplx b, ref cmplx c)
+        {
+            a.r = b.r * c.r + b.i * c.i;
+            a.i = -b.r * c.i + b.i * c.r;
+        }
+
+        internal static void BLUESTEINSTEP1B(ref cmplxF a, ref cmplxF b, ref cmplxF c)
+        {
+            a.r = b.r * c.r + b.i * c.i;
+            a.i = -b.r * c.i + b.i * c.r;
+        }
+
+        internal static void BLUESTEINSTEP2A(ref cmplx a, ref cmplx b)
+        {
+            double im = -a.r * b.i + a.i * b.r;
+            a.r = a.r * b.r + a.i * b.i;
+            a.i = im;
+        }
+
+        internal static void BLUESTEINSTEP2A(ref cmplxF a, ref cmplxF b)
+        {
+            float im = -a.r * b.i + a.i * b.r;
+            a.r = a.r * b.r + a.i * b.i;
+            a.i = im;
+        }
+
+        internal static void BLUESTEINSTEP2B(ref cmplx a, ref cmplx b)
+        {
+            double im = a.r * b.i + a.i * b.r;
+            a.r = a.r * b.r - a.i * b.i;
+            a.i = im;
+        }
+
+        internal static void BLUESTEINSTEP2B(ref cmplxF a, ref cmplxF b)
+        {
+            float im = a.r * b.i + a.i * b.r;
+            a.r = a.r * b.r - a.i * b.i;
+            a.i = im;
+        }
+
+        internal static void BLUESTEINSTEP3A(ref cmplx a, ref cmplx b, ref cmplx c)
+        {
+            a.r = b.r * c.r - b.i * c.i;
+            a.i = b.i * c.r + b.r * c.i;
+        }
+
+        internal static void BLUESTEINSTEP3A(ref cmplxF a, ref cmplxF b, ref cmplxF c)
+        {
+            a.r = b.r * c.r - b.i * c.i;
+            a.i = b.i * c.r + b.r * c.i;
+        }
+
+        internal static void BLUESTEINSTEP3B(ref cmplx a, ref cmplx b, ref cmplx c)
+        {
+            a.r = b.r * c.r + b.i * c.i;
+            a.i = -b.i * c.r + b.r * c.i;
+        }
+
+        internal static void BLUESTEINSTEP3B(ref cmplxF a, ref cmplxF b, ref cmplxF c)
+        {
+            a.r = b.r * c.r + b.i * c.i;
+            a.i = -b.i * c.r + b.r * c.i;
+        }
     }
 }

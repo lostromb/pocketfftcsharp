@@ -12,6 +12,7 @@ using static Driver.Benchmarks;
 namespace Driver
 {
     [MemoryDiagnoser]
+    //[DisassemblyDiagnoser(maxDepth: 10)]
     public class Benchmarks
     {
         private IReal1DFFTPlanFloat64 _real64;
@@ -54,19 +55,19 @@ namespace Driver
             }
         }
 
-        [Benchmark]
-        public void Real32()
-        {
-            _real32.Forward(_realInput32.AsSpan(), 3.0f);
-            _real32.Backward(_realInput32.AsSpan(), 3.0f);
-        }
+        //[Benchmark]
+        //public void Real32()
+        //{
+        //    _real32.Forward(_realInput32.AsSpan(), 3.0f);
+        //    _real32.Backward(_realInput32.AsSpan(), 3.0f);
+        //}
 
-        [Benchmark]
-        public void Real64()
-        {
-            _real64.Forward(_realInput64.AsSpan(), 3.0);
-            _real64.Backward(_realInput64.AsSpan(), 3.0);
-        }
+        //[Benchmark]
+        //public void Real64()
+        //{
+        //    _real64.Forward(_realInput64.AsSpan(), 3.0);
+        //    _real64.Backward(_realInput64.AsSpan(), 3.0);
+        //}
 
         [Benchmark]
         public void Complex32()
@@ -75,11 +76,11 @@ namespace Driver
             _complex32.Backward(_complexInput32.AsSpan(), 3.0f);
         }
 
-        [Benchmark]
-        public void Complex64()
-        {
-            _complex64.Forward(_complexInput64.AsSpan(), 3.0);
-            _complex64.Backward(_complexInput64.AsSpan(), 3.0);
-        }
+        //[Benchmark]
+        //public void Complex64()
+        //{
+        //    _complex64.Forward(_complexInput64.AsSpan(), 3.0);
+        //    _complex64.Backward(_complexInput64.AsSpan(), 3.0);
+        //}
     }
 }

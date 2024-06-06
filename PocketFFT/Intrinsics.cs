@@ -91,6 +91,65 @@ namespace PocketFFT
             }
         }
 
+        internal static unsafe void ScalePointerInPlace(cmplx* span, int length, double scale)
+        {
+            ScalePointerInPlace((double*)span, length * 2, scale);
+        }
+
+        internal static unsafe void ScalePointer(cmplx* source, cmplx* dest, int length, double scale)
+        {
+            ScalePointer(
+                (double*)source,
+                (double*)dest,
+                length * 2,
+                scale);
+        }
+
+        internal static unsafe void ScalePointer(double* source, double* dest, int length, double scale)
+        {
+            int idx = 0;
+            int endIdx = length;
+#if NET6_0_OR_GREATER
+            if (Vector.IsHardwareAccelerated)
+            {
+                int vectorEndIdx = endIdx - (length % Vector<double>.Count);
+                while (idx < vectorEndIdx)
+                {
+                    Vector.Multiply(new Vector<double>(new Span<double>(source + idx, Vector<double>.Count)), scale)
+                        .CopyTo(new Span<double>(dest + idx, Vector<double>.Count));
+                    idx += Vector<double>.Count;
+                }
+            }
+#endif
+            for (; idx < endIdx; idx++)
+            {
+                dest[idx] = source[idx] * scale;
+            }
+        }
+
+        internal static unsafe void ScalePointerInPlace(double* span, int length, double scale)
+        {
+            int idx = 0;
+            int endIdx = length;
+#if NET6_0_OR_GREATER
+            if (Vector.IsHardwareAccelerated)
+            {
+                int vectorEndIdx = endIdx - (length % Vector<double>.Count);
+                while (idx < vectorEndIdx)
+                {
+                    Span<double> slice = new Span<double>(span + idx, Vector<double>.Count);
+                    Vector.Multiply(new Vector<double>(slice), scale).CopyTo(slice);
+                    idx += Vector<double>.Count;
+                }
+            }
+#endif
+
+            for (; idx < endIdx; idx++)
+            {
+                span[idx] *= scale;
+            }
+        }
+
         internal static void ScaleSpanInPlace(Span<cmplxF> span, float scale)
         {
             ScaleSpanInPlace(MemoryMarshal.Cast<cmplxF, float>(span), scale);
@@ -136,6 +195,65 @@ namespace PocketFFT
                 while (idx < vectorEndIdx)
                 {
                     Span<float> slice = span.Slice(idx, Vector<float>.Count);
+                    Vector.Multiply(new Vector<float>(slice), scale).CopyTo(slice);
+                    idx += Vector<float>.Count;
+                }
+            }
+#endif
+
+            for (; idx < endIdx; idx++)
+            {
+                span[idx] *= scale;
+            }
+        }
+
+        internal static unsafe void ScalePointerInPlace(cmplxF* span, int length, float scale)
+        {
+            ScalePointerInPlace((float*)span, length * 2, scale);
+        }
+
+        internal static unsafe void ScalePointer(cmplxF* source, cmplxF* dest, int length, float scale)
+        {
+            ScalePointer(
+                (float*)source,
+                (float*)dest,
+                length * 2,
+                scale);
+        }
+
+        internal static unsafe void ScalePointer(float* source, float* dest, int length, float scale)
+        {
+            int idx = 0;
+            int endIdx = length;
+#if NET6_0_OR_GREATER
+            if (Vector.IsHardwareAccelerated)
+            {
+                int vectorEndIdx = endIdx - (length % Vector<float>.Count);
+                while (idx < vectorEndIdx)
+                {
+                    Vector.Multiply(new Vector<float>(new Span<float>(source + idx, Vector<float>.Count)), scale)
+                        .CopyTo(new Span<float>(dest + idx, Vector<float>.Count));
+                    idx += Vector<float>.Count;
+                }
+            }
+#endif
+            for (; idx < endIdx; idx++)
+            {
+                dest[idx] = source[idx] * scale;
+            }
+        }
+
+        internal static unsafe void ScalePointerInPlace(float* span, int length, float scale)
+        {
+            int idx = 0;
+            int endIdx = length;
+#if NET6_0_OR_GREATER
+            if (Vector.IsHardwareAccelerated)
+            {
+                int vectorEndIdx = endIdx - (length % Vector<float>.Count);
+                while (idx < vectorEndIdx)
+                {
+                    Span<float> slice = new Span<float>(span + idx, Vector<float>.Count);
                     Vector.Multiply(new Vector<float>(slice), scale).CopyTo(slice);
                     idx += Vector<float>.Count;
                 }

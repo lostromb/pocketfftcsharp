@@ -10,14 +10,14 @@ namespace PocketFFT
     {
         internal int n;
         internal int n2;
-        internal PlanComplexPackedFloat32 plan;
+        internal IComplex1DFFTPlanFloat32 plan;
         internal cmplxF[] mem;
         internal int bk_idx; // indexes into mem
         internal int bkf_idx; // indexes into mem
 
-        public int Length => plan.length;
+        public int Length => plan.Length;
 
-        public PlanBluesteinFloat32(int length)
+        public PlanBluesteinFloat32(int length, Func<int, IComplex1DFFTPlanFloat32> innerTransformFactory)
         {
             n = length;
             n2 = Intrinsics.good_size(n * 2 - 1);
@@ -62,7 +62,7 @@ namespace PocketFFT
                 bkf[m].i = 0.0f;
             }
 
-            plan = new PlanComplexPackedFloat32(n2);
+            plan = innerTransformFactory(n2);
             plan.Forward(bkf, 1.0f);
         }
 

@@ -17,7 +17,7 @@
 
             if ((length < 50) || (Intrinsics.largest_prime_factor(length) <= Math.Sqrt(length)))
             {
-                return new PlanComplexPackedFloat32(length);
+                return new PlanComplexPackedFloat32Unsafe(length);
             }
 
             double comp1 = Intrinsics.cost_guess(length);
@@ -26,11 +26,11 @@
 
             if (comp2 < comp1) // use Bluestein
             {
-                return new PlanBluesteinFloat32(length);
+                return new PlanBluesteinFloat32(length, (len) => new PlanComplexPackedFloat32Unsafe(len));
             }
             else
             {
-                return new PlanComplexPackedFloat32(length);
+                return new PlanComplexPackedFloat32Unsafe(length);
             }
         }
 
@@ -47,7 +47,7 @@
 
             if ((length < 50) || (Intrinsics.largest_prime_factor(length) <= Math.Sqrt(length)))
             {
-                return new PlanComplexPackedFloat64(length);
+                return new PlanComplexPackedFloat64Unsafe(length);
             }
 
             double comp1 = Intrinsics.cost_guess(length);
@@ -56,11 +56,11 @@
 
             if (comp2 < comp1) // use Bluestein
             {
-                return new PlanBluesteinFloat64(length);
+                return new PlanBluesteinFloat64(length, (len) => new PlanComplexPackedFloat64Unsafe(len));
             }
             else
             {
-                return new PlanComplexPackedFloat64(length);
+                return new PlanComplexPackedFloat64Unsafe(length);
             }
         }
 
@@ -85,7 +85,7 @@
             comp2 *= 1.5; /* fudge factor that appears to give good overall performance */
             if (comp2 < comp1) // use Bluestein
             {
-                return new PlanBluesteinFloat32(length);
+                return new PlanBluesteinFloat32(length, (len) => new PlanComplexPackedFloat32(len));
             }
             else
             {
@@ -114,7 +114,7 @@
             comp2 *= 1.5; /* fudge factor that appears to give good overall performance */
             if (comp2 < comp1) // use Bluestein
             {
-                return new PlanBluesteinFloat64(length);
+                return new PlanBluesteinFloat64(length, (len) => new PlanComplexPackedFloat64(len));
             }
             else
             {
